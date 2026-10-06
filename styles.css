@@ -70,14 +70,6 @@ h1 em { color: var(--red); font-family: Georgia, 'Times New Roman', serif; font-
 .primary-button:focus-visible, .outline-link:focus-visible, .main-nav a:focus-visible, .header-link:focus-visible { outline: 3px solid var(--white); outline-offset: 4px; }
 .form-status { grid-column: 1 / -1; min-height: 18px; margin: 0; color: var(--blue); font-size: 13px; font-weight: 900; }
 
-.priority-band { background: var(--white); border-top: var(--line) solid var(--blue); border-bottom: var(--line) solid var(--blue); }
-.priority-inner { display: grid; grid-template-columns: 1fr 1.35fr auto; align-items: center; gap: 34px; min-height: 118px; }
-.eyebrow { margin: 0; font-size: 12px; font-weight: 900; letter-spacing: 0.11em; }
-.priority-line { margin: 0; color: var(--blue); font-size: clamp(22px, 3vw, 34px); font-weight: 1000; line-height: 0.95; letter-spacing: -0.045em; text-transform: uppercase; }
-.outline-link { display: inline-flex; align-items: center; gap: 12px; min-height: 46px; padding: 0 16px; border: var(--line) solid var(--blue); font-size: 12px; font-weight: 900; text-decoration: none; white-space: nowrap; }
-.outline-link span { color: var(--red); font-size: 20px; }
-.outline-link:hover { color: var(--white); background: var(--blue); }
-
 .site-footer { color: var(--white); background: var(--blue); }
 .footer-inner { display: flex; justify-content: space-between; gap: 40px; min-height: 250px; padding-top: 48px; padding-bottom: 46px; }
 .footer-lockup { display: inline-block; padding: 12px 17px; border: 1px solid var(--orange); color: var(--orange); font-size: 14px; font-weight: 1000; line-height: 1.1; letter-spacing: 0.02em; }
@@ -100,8 +92,6 @@ h1 em { color: var(--red); font-family: Georgia, 'Times New Roman', serif; font-
   .hero { grid-template-columns: 1fr; gap: 55px; padding-top: 18px; }
   .logo-stage { min-height: 280px; }
   h1 { font-size: clamp(50px, 12vw, 82px); }
-  .priority-inner { grid-template-columns: 1fr; gap: 18px; padding-top: 28px; padding-bottom: 30px; }
-  .outline-link { justify-self: start; }
 }
 
 @media (max-width: 520px) {
