@@ -2,7 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const mysql = require('mysql2/promise');
+const { db } = require('./db');
 const QRCode = require('qrcode');
 
 const root = __dirname;
@@ -21,12 +21,8 @@ const mime = {
 };
 const adminSessions = new Map();
 const sessionLifetimeMs = 1000 * 60 * 60 * 12;
-let dbPool;
-
 function getDb() {
-  if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not configured.');
-  if (!dbPool) dbPool = mysql.createPool(process.env.DATABASE_URL);
-  return dbPool;
+  return db;
 }
 
 function publicOrigin(req) {
@@ -174,8 +170,8 @@ function newMemberCode() {
 }
 
 async function getManifesto() {
-  const [rows] = await getDb().query('SELECT content_json FROM site_content WHERE content_key = ?', ['manifesto']);
-  return contentPayload(rows[0]);
+  const row = getDb().prepare('SELECT content_json FROM site_content WHERE content_key = ?').get('manifesto');
+  return contentPayload(row);
 }
 
 async function handleApi(req, res) {
@@ -193,7 +189,7 @@ async function handleApi(req, res) {
       const section = cleanString(body.section, 120);
       const mobile = cleanString(body.mobile, 64);
       if (!firstName || !/^\S+@\S+\.\S+$/.test(email) || !section) return sendJson(res, 400, { error: 'Please provide your name, a valid email, and your section.' });
-      await getDb().query('INSERT INTO applications (first_name, email, section, mobile) VALUES (?, ?, ?, ?)', [firstName, email, section, mobile || null]);
+      getDb().prepare('INSERT INTO applications (first_name, email, section, mobile) VALUES (?, ?, ?, ?)').run(firstName, email, section, mobile || null);
       return sendJson(res, 201, { ok: true, message: 'Application received. The council team will review it soon.' });
     } catch (error) {
       return sendJson(res, 400, { error: error.message });
@@ -235,18 +231,18 @@ async function handleApi(req, res) {
 
     if (req.method === 'GET' && pathname === '/api/admin/applications') {
       const status = cleanString(url.searchParams.get('status') || '', 20);
-      const [rows] = await getDb().query(`
+      const rows = getDb().prepare(`
         SELECT a.*, m.member_code
         FROM applications a
         LEFT JOIN memberships m ON m.application_id = a.id
         ${status ? 'WHERE a.status = ?' : ''}
         ORDER BY a.created_at DESC
-      `, status ? [status] : []);
+      `).all(...(status ? [status] : []));
       return sendJson(res, 200, { applications: rows.map(applicationRow) });
     }
 
     if (req.method === 'GET' && pathname === '/api/admin/memberships') {
-      const [rows] = await getDb().query('SELECT * FROM memberships ORDER BY approved_at DESC');
+      const rows = getDb().prepare('SELECT * FROM memberships ORDER BY approved_at DESC').all();
       return sendJson(res, 200, { memberships: rows.map((row) => ({ id: row.id, memberCode: row.member_code, firstName: row.first_name, email: row.email, section: row.section, mobile: row.mobile || '', status: row.status, approvedAt: row.approved_at })) });
     }
 
@@ -263,7 +259,7 @@ async function handleApi(req, res) {
         closing: cleanString(body.closing, 1500),
         photos: Array.isArray(body.photos) ? body.photos.slice(0, 8).map((photo) => cleanString(photo, 1000)).filter((photo) => /^https?:\/\//.test(photo) || photo.startsWith('/')) : []
       };
-      await getDb().query('INSERT INTO site_content (content_key, content_json) VALUES (?, ?) ON DUPLICATE KEY UPDATE content_json = VALUES(content_json)', ['manifesto', JSON.stringify(content)]);
+      getDb().prepare('INSERT INTO site_content (content_key, content_json) VALUES (?, ?) ON CONFLICT(content_key) DO UPDATE SET content_json = excluded.content_json').run('manifesto', JSON.stringify(content));
       return sendJson(res, 200, { ok: true, content });
     }
 
@@ -274,33 +270,33 @@ async function handleApi(req, res) {
       const decision = body.decision === 'accepted' ? 'accepted' : body.decision === 'rejected' ? 'rejected' : null;
       if (!decision) return sendJson(res, 400, { error: 'Decision must be accepted or rejected.' });
       const reviewNote = cleanString(body.reviewNote, 2000);
-      const connection = await getDb().getConnection();
       try {
-        await connection.beginTransaction();
-        const [rows] = await connection.query('SELECT * FROM applications WHERE id = ? FOR UPDATE', [applicationId]);
-        const application = rows[0];
-        if (!application) { await connection.rollback(); return sendJson(res, 404, { error: 'Application not found.' }); }
-        let memberCode = null;
-        if (decision === 'accepted') {
-          const [existing] = await connection.query('SELECT member_code FROM memberships WHERE application_id = ?', [applicationId]);
-          memberCode = existing[0]?.member_code || newMemberCode();
-          if (!existing.length) {
-            await connection.query('INSERT INTO memberships (application_id, member_code, first_name, email, section, mobile) VALUES (?, ?, ?, ?, ?, ?)', [applicationId, memberCode, application.first_name, application.email, application.section, application.mobile || null]);
+        const decisionTransaction = getDb().transaction(() => {
+          const application = getDb().prepare('SELECT * FROM applications WHERE id = ?').get(applicationId);
+          if (!application) return null;
+          let memberCode = null;
+          if (decision === 'accepted') {
+            const existing = getDb().prepare('SELECT member_code FROM memberships WHERE application_id = ?').get(applicationId);
+            memberCode = existing?.member_code || newMemberCode();
+            if (!existing) {
+              getDb().prepare('INSERT INTO memberships (application_id, member_code, first_name, email, section, mobile) VALUES (?, ?, ?, ?, ?, ?)').run(applicationId, memberCode, application.first_name, application.email, application.section, application.mobile || null);
+            }
           }
-        }
-        await connection.query('UPDATE applications SET status = ?, review_note = ?, reviewer_email = ? WHERE id = ?', [decision, reviewNote || null, admin.email, applicationId]);
-        await connection.commit();
+          getDb().prepare('UPDATE applications SET status = ?, review_note = ?, reviewer_email = ? WHERE id = ?').run(decision, reviewNote || null, admin.email, applicationId);
+          return memberCode;
+        });
+        const memberCode = decisionTransaction();
+        if (memberCode === null && !getDb().prepare('SELECT id FROM applications WHERE id = ?').get(applicationId)) return sendJson(res, 404, { error: 'Application not found.' });
         return sendJson(res, 200, { ok: true, decision, memberCode });
       } catch (error) {
-        await connection.rollback();
         return sendJson(res, 400, { error: error.message });
-      } finally { connection.release(); }
+      }
     }
   }
 
   const membershipMatch = pathname.match(/^\/api\/memberships\/([A-Za-z0-9-]+)$/);
   if (req.method === 'GET' && membershipMatch) {
-    const [rows] = await getDb().query('SELECT member_code, first_name, section, status, approved_at FROM memberships WHERE member_code = ?', [membershipMatch[1]]);
+    const rows = [getDb().prepare('SELECT member_code, first_name, section, status, approved_at FROM memberships WHERE member_code = ?').get(membershipMatch[1])].filter(Boolean);
     const member = rows[0];
     if (!member || member.status !== 'active') return sendJson(res, 404, { error: 'Membership not found or inactive.' });
     return sendJson(res, 200, { member: { memberCode: member.member_code, firstName: member.first_name, section: member.section, status: member.status, approvedAt: member.approved_at } });
@@ -308,7 +304,7 @@ async function handleApi(req, res) {
 
   const qrMatch = pathname.match(/^\/api\/memberships\/([A-Za-z0-9-]+)\/qr$/);
   if (req.method === 'GET' && qrMatch) {
-    const [rows] = await getDb().query('SELECT member_code, status FROM memberships WHERE member_code = ?', [qrMatch[1]]);
+    const rows = [getDb().prepare('SELECT member_code, status FROM memberships WHERE member_code = ?').get(qrMatch[1])].filter(Boolean);
     if (!rows[0] || rows[0].status !== 'active') return sendJson(res, 404, { error: 'Membership not found or inactive.' });
     const verifyUrl = `${publicOrigin(req)}/verify.html?code=${encodeURIComponent(qrMatch[1])}`;
     const dataUrl = await QRCode.toDataURL(verifyUrl, { width: 260, margin: 1, color: { dark: '#2419dc', light: '#ffffff' } });
