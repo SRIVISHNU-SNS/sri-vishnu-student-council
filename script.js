@@ -18,9 +18,25 @@ if (menuToggle && mainNav) {
 }
 
 if (joinForm && formStatus) {
-  joinForm.addEventListener('submit', (event) => {
+  joinForm.addEventListener('submit', async (event) => {
     event.preventDefault();
-    formStatus.textContent = 'Thanks for stepping up — we’ll be in touch soon.';
-    joinForm.reset();
+    const submit = joinForm.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    formStatus.textContent = 'Sending your application…';
+    try {
+      const response = await fetch('/api/applications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.fromEntries(new FormData(joinForm)))
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Please try again.');
+      formStatus.textContent = result.message;
+      joinForm.reset();
+    } catch (error) {
+      formStatus.textContent = error.message;
+    } finally {
+      submit.disabled = false;
+    }
   });
 }

@@ -1,9 +1,13 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const mysql = require('mysql2/promise');
+const QRCode = require('qrcode');
 
 const root = __dirname;
 const port = Number(process.env.PORT || 3000);
+const publicOriginFallback = `http://localhost:${port}`;
 const mime = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -15,44 +19,314 @@ const mime = {
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon'
 };
+const adminSessions = new Map();
+const sessionLifetimeMs = 1000 * 60 * 60 * 12;
+let dbPool;
+
+function getDb() {
+  if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not configured.');
+  if (!dbPool) dbPool = mysql.createPool(process.env.DATABASE_URL);
+  return dbPool;
+}
+
+function publicOrigin(req) {
+  const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+  const forwardedHost = String(req.headers['x-forwarded-host'] || '').split(',')[0].trim();
+  const host = forwardedHost || req.headers.host || `localhost:${port}`;
+  return `${forwardedProto || (host.startsWith('localhost') ? 'http' : 'https')}://${host}`;
+}
+
+function cookies(req) {
+  return Object.fromEntries(String(req.headers.cookie || '').split(';').map((part) => part.trim()).filter(Boolean).map((part) => {
+    const index = part.indexOf('=');
+    return index === -1 ? [part, ''] : [part.slice(0, index), decodeURIComponent(part.slice(index + 1))];
+  }));
+}
+
+function setCookie(res, name, value, options = {}) {
+  const parts = [`${name}=${encodeURIComponent(value)}`, `Path=${options.path || '/'}`];
+  if (options.maxAge !== undefined) parts.push(`Max-Age=${options.maxAge}`);
+  if (options.httpOnly !== false) parts.push('HttpOnly');
+  if (options.sameSite) parts.push(`SameSite=${options.sameSite}`);
+  if (options.secure) parts.push('Secure');
+  res.setHeader('Set-Cookie', parts.join('; '));
+}
+
+function clearCookie(res, name) {
+  setCookie(res, name, '', { maxAge: 0, sameSite: 'None', secure: true });
+}
+
+function sendJson(res, status, payload) {
+  const body = JSON.stringify(payload);
+  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+  res.end(body);
+}
+
+function sendText(res, status, body, contentType = 'text/plain; charset=utf-8') {
+  res.writeHead(status, { 'Content-Type': contentType, 'Cache-Control': 'no-store' });
+  res.end(body);
+}
 
 function safePath(requestUrl) {
-  const pathname = decodeURIComponent(new URL(requestUrl, 'http://localhost').pathname);
+  const pathname = decodeURIComponent(new URL(requestUrl, publicOriginFallback).pathname);
   const relative = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
   const resolved = path.resolve(root, relative);
   return resolved.startsWith(root) ? resolved : null;
 }
 
-const server = http.createServer((req, res) => {
-  const filePath = safePath(req.url);
-  if (!filePath) {
-    res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
-    return res.end('Forbidden');
-  }
-
-  fs.stat(filePath, (error, stats) => {
-    if (!error && stats.isFile()) return serve(filePath, res);
-
-    const publicPath = path.resolve(root, 'public', filePath.slice(root.length + 1));
-    fs.stat(publicPath, (publicError, publicStats) => {
-      if (publicError || !publicStats.isFile()) {
-        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-        return res.end('Not found');
-      }
-      serve(publicPath, res);
-    });
-  });
-});
-
 function serve(filePath, res) {
   const extension = path.extname(filePath).toLowerCase();
   res.writeHead(200, {
     'Content-Type': mime[extension] || 'application/octet-stream',
-    'Cache-Control': extension === '.jpg' ? 'public, max-age=31536000, immutable' : 'no-cache'
+    'Cache-Control': extension === '.png' || extension === '.jpg' ? 'public, max-age=31536000, immutable' : 'no-cache'
   });
   fs.createReadStream(filePath).pipe(res);
 }
 
-server.listen(port, '0.0.0.0', () => {
-  console.log(`Sri Vishnu site listening on 0.0.0.0:${port}`);
+function serveStatic(req, res) {
+  const filePath = safePath(req.url);
+  if (!filePath) return sendText(res, 403, 'Forbidden');
+  fs.stat(filePath, (error, stats) => {
+    if (!error && stats.isFile()) return serve(filePath, res);
+    const relative = filePath.slice(root.length + 1);
+    const publicPath = path.resolve(root, 'public', relative);
+    fs.stat(publicPath, (publicError, publicStats) => {
+      if (publicError || !publicStats.isFile()) return sendText(res, 404, 'Not found');
+      serve(publicPath, res);
+    });
+  });
+}
+
+function readBody(req, limit = 250000) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', (chunk) => {
+      body += chunk;
+      if (body.length > limit) {
+        reject(new Error('Request body is too large.'));
+        req.destroy();
+      }
+    });
+    req.on('end', () => {
+      try { resolve(body ? JSON.parse(body) : {}); } catch { reject(new Error('Invalid JSON body.')); }
+    });
+    req.on('error', reject);
+  });
+}
+
+function sameOrigin(req) {
+  const origin = req.headers.origin;
+  return !origin || origin === publicOrigin(req);
+}
+
+function adminEmail() {
+  return String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+}
+
+function getAdmin(req) {
+  const token = cookies(req).admin_session;
+  if (!token) return null;
+  const session = adminSessions.get(token);
+  if (!session || session.expiresAt < Date.now() || session.email !== adminEmail()) {
+    if (token) adminSessions.delete(token);
+    return null;
+  }
+  return session;
+}
+
+function requireAdmin(req, res) {
+  const admin = getAdmin(req);
+  if (!admin) {
+    sendJson(res, 401, { error: 'Admin login required.' });
+    return null;
+  }
+  return admin;
+}
+
+function cleanString(value, max = 5000) {
+  return String(value ?? '').trim().slice(0, max);
+}
+
+function applicationRow(row) {
+  return {
+    id: row.id,
+    firstName: row.first_name,
+    email: row.email,
+    section: row.section,
+    mobile: row.mobile || '',
+    status: row.status,
+    reviewNote: row.review_note || '',
+    reviewerEmail: row.reviewer_email || '',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    memberCode: row.member_code || null
+  };
+}
+
+function contentPayload(row) {
+  if (!row) return null;
+  try { return JSON.parse(row.content_json); } catch { return null; }
+}
+
+function newMemberCode() {
+  const year = new Date().getFullYear();
+  return `SV-${year}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+}
+
+async function getManifesto() {
+  const [rows] = await getDb().query('SELECT content_json FROM site_content WHERE content_key = ?', ['manifesto']);
+  return contentPayload(rows[0]);
+}
+
+async function handleApi(req, res) {
+  const url = new URL(req.url, publicOriginFallback);
+  const pathname = url.pathname;
+
+  if (req.method === 'GET' && pathname === '/api/health') return sendJson(res, 200, { ok: true });
+
+  if (req.method === 'POST' && pathname === '/api/applications') {
+    if (!sameOrigin(req)) return sendJson(res, 403, { error: 'Cross-origin submissions are not accepted.' });
+    try {
+      const body = await readBody(req);
+      const firstName = cleanString(body.firstName, 120);
+      const email = cleanString(body.email, 255).toLowerCase();
+      const section = cleanString(body.section, 120);
+      const mobile = cleanString(body.mobile, 64);
+      if (!firstName || !/^\S+@\S+\.\S+$/.test(email) || !section) return sendJson(res, 400, { error: 'Please provide your name, a valid email, and your section.' });
+      await getDb().query('INSERT INTO applications (first_name, email, section, mobile) VALUES (?, ?, ?, ?)', [firstName, email, section, mobile || null]);
+      return sendJson(res, 201, { ok: true, message: 'Application received. The council team will review it soon.' });
+    } catch (error) {
+      return sendJson(res, 400, { error: error.message });
+    }
+  }
+
+  if (req.method === 'GET' && pathname === '/api/content/manifesto') {
+    try { return sendJson(res, 200, { content: await getManifesto() }); } catch (error) { return sendJson(res, 500, { error: error.message }); }
+  }
+
+  if (req.method === 'POST' && pathname === '/api/admin/login') {
+    if (!sameOrigin(req)) return sendJson(res, 403, { error: 'Cross-origin login is not accepted.' });
+    try {
+      const body = await readBody(req, 10000);
+      const email = cleanString(body.email, 255).toLowerCase();
+      if (!email || !adminEmail() || email !== adminEmail()) return sendJson(res, 403, { error: 'That email is not authorized for admin access.' });
+      const token = crypto.randomBytes(32).toString('hex');
+      adminSessions.set(token, { email, expiresAt: Date.now() + sessionLifetimeMs });
+      setCookie(res, 'admin_session', token, { maxAge: Math.floor(sessionLifetimeMs / 1000), sameSite: 'None', secure: true });
+      return sendJson(res, 200, { ok: true, email });
+    } catch (error) { return sendJson(res, 400, { error: error.message }); }
+  }
+
+  if (req.method === 'POST' && pathname === '/api/admin/logout') {
+    const token = cookies(req).admin_session;
+    if (token) adminSessions.delete(token);
+    clearCookie(res, 'admin_session');
+    return sendJson(res, 200, { ok: true });
+  }
+
+  if (req.method === 'GET' && pathname === '/api/admin/session') {
+    const admin = getAdmin(req);
+    return sendJson(res, 200, { authenticated: Boolean(admin), email: admin?.email || null });
+  }
+
+  if (pathname.startsWith('/api/admin/')) {
+    const admin = requireAdmin(req, res);
+    if (!admin) return;
+
+    if (req.method === 'GET' && pathname === '/api/admin/applications') {
+      const status = cleanString(url.searchParams.get('status') || '', 20);
+      const [rows] = await getDb().query(`
+        SELECT a.*, m.member_code
+        FROM applications a
+        LEFT JOIN memberships m ON m.application_id = a.id
+        ${status ? 'WHERE a.status = ?' : ''}
+        ORDER BY a.created_at DESC
+      `, status ? [status] : []);
+      return sendJson(res, 200, { applications: rows.map(applicationRow) });
+    }
+
+    if (req.method === 'GET' && pathname === '/api/admin/memberships') {
+      const [rows] = await getDb().query('SELECT * FROM memberships ORDER BY approved_at DESC');
+      return sendJson(res, 200, { memberships: rows.map((row) => ({ id: row.id, memberCode: row.member_code, firstName: row.first_name, email: row.email, section: row.section, mobile: row.mobile || '', status: row.status, approvedAt: row.approved_at })) });
+    }
+
+    if (req.method === 'GET' && pathname === '/api/admin/content/manifesto') {
+      return sendJson(res, 200, { content: await getManifesto() });
+    }
+
+    if (req.method === 'PUT' && pathname === '/api/admin/content/manifesto') {
+      const body = await readBody(req, 400000);
+      const content = {
+        title: cleanString(body.title, 240),
+        intro: cleanString(body.intro, 3000),
+        sections: Array.isArray(body.sections) ? body.sections.slice(0, 8).map((section) => ({ heading: cleanString(section.heading, 120), body: cleanString(section.body, 3000) })).filter((section) => section.heading || section.body) : [],
+        closing: cleanString(body.closing, 1500),
+        photos: Array.isArray(body.photos) ? body.photos.slice(0, 8).map((photo) => cleanString(photo, 1000)).filter((photo) => /^https?:\/\//.test(photo) || photo.startsWith('/')) : []
+      };
+      await getDb().query('INSERT INTO site_content (content_key, content_json) VALUES (?, ?) ON DUPLICATE KEY UPDATE content_json = VALUES(content_json)', ['manifesto', JSON.stringify(content)]);
+      return sendJson(res, 200, { ok: true, content });
+    }
+
+    const decisionMatch = pathname.match(/^\/api\/admin\/applications\/(\d+)\/decision$/);
+    if (req.method === 'POST' && decisionMatch) {
+      const applicationId = Number(decisionMatch[1]);
+      const body = await readBody(req, 20000);
+      const decision = body.decision === 'accepted' ? 'accepted' : body.decision === 'rejected' ? 'rejected' : null;
+      if (!decision) return sendJson(res, 400, { error: 'Decision must be accepted or rejected.' });
+      const reviewNote = cleanString(body.reviewNote, 2000);
+      const connection = await getDb().getConnection();
+      try {
+        await connection.beginTransaction();
+        const [rows] = await connection.query('SELECT * FROM applications WHERE id = ? FOR UPDATE', [applicationId]);
+        const application = rows[0];
+        if (!application) { await connection.rollback(); return sendJson(res, 404, { error: 'Application not found.' }); }
+        let memberCode = null;
+        if (decision === 'accepted') {
+          const [existing] = await connection.query('SELECT member_code FROM memberships WHERE application_id = ?', [applicationId]);
+          memberCode = existing[0]?.member_code || newMemberCode();
+          if (!existing.length) {
+            await connection.query('INSERT INTO memberships (application_id, member_code, first_name, email, section, mobile) VALUES (?, ?, ?, ?, ?, ?)', [applicationId, memberCode, application.first_name, application.email, application.section, application.mobile || null]);
+          }
+        }
+        await connection.query('UPDATE applications SET status = ?, review_note = ?, reviewer_email = ? WHERE id = ?', [decision, reviewNote || null, admin.email, applicationId]);
+        await connection.commit();
+        return sendJson(res, 200, { ok: true, decision, memberCode });
+      } catch (error) {
+        await connection.rollback();
+        return sendJson(res, 400, { error: error.message });
+      } finally { connection.release(); }
+    }
+  }
+
+  const membershipMatch = pathname.match(/^\/api\/memberships\/([A-Za-z0-9-]+)$/);
+  if (req.method === 'GET' && membershipMatch) {
+    const [rows] = await getDb().query('SELECT member_code, first_name, section, status, approved_at FROM memberships WHERE member_code = ?', [membershipMatch[1]]);
+    const member = rows[0];
+    if (!member || member.status !== 'active') return sendJson(res, 404, { error: 'Membership not found or inactive.' });
+    return sendJson(res, 200, { member: { memberCode: member.member_code, firstName: member.first_name, section: member.section, status: member.status, approvedAt: member.approved_at } });
+  }
+
+  const qrMatch = pathname.match(/^\/api\/memberships\/([A-Za-z0-9-]+)\/qr$/);
+  if (req.method === 'GET' && qrMatch) {
+    const [rows] = await getDb().query('SELECT member_code, status FROM memberships WHERE member_code = ?', [qrMatch[1]]);
+    if (!rows[0] || rows[0].status !== 'active') return sendJson(res, 404, { error: 'Membership not found or inactive.' });
+    const verifyUrl = `${publicOrigin(req)}/verify.html?code=${encodeURIComponent(qrMatch[1])}`;
+    const dataUrl = await QRCode.toDataURL(verifyUrl, { width: 260, margin: 1, color: { dark: '#2419dc', light: '#ffffff' } });
+    return sendJson(res, 200, { dataUrl, verifyUrl });
+  }
+
+  return sendJson(res, 404, { error: 'API route not found.' });
+}
+
+const server = http.createServer(async (req, res) => {
+  try {
+    if (req.url.startsWith('/api/')) return await handleApi(req, res);
+    if (req.method !== 'GET' && req.method !== 'HEAD') return sendText(res, 405, 'Method not allowed');
+    return serveStatic(req, res);
+  } catch (error) {
+    console.error(error.message);
+    return sendJson(res, 500, { error: 'Unexpected server error.' });
+  }
 });
+
+server.listen(port, '0.0.0.0', () => console.log(`Sri Vishnu site listening on 0.0.0.0:${port}`));

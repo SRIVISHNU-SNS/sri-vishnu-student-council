@@ -1,5 +1,10 @@
 {
   "routes": [
-    { "path": "/", "title": "Sri Vishnu for Students General Council" }
+    { "path": "/", "title": "Sri Vishnu for Students General Council" },
+    { "path": "/manifesto.html", "title": "Manifesto — Sri Vishnu" },
+    { "path": "/about.html", "title": "About — Sri Vishnu" },
+    { "path": "/admin.html", "title": "Admin — Sri Vishnu" },
+    { "path": "/membership-card.html", "title": "Membership Card — Sri Vishnu" },
+    { "path": "/verify.html", "title": "Verify Membership — Sri Vishnu" }
   ]
 }

@@ -118,3 +118,103 @@ h1 em { color: var(--red); font-family: Georgia, 'Times New Roman', serif; font-
   .footer-inner { flex-direction: column; min-height: 0; padding-top: 35px; padding-bottom: 35px; }
   .footer-right { padding-top: 0; text-align: left; }
 }
+
+/* Inner pages and admin workspace */
+.inner-page { background: var(--orange); }
+.inner-main, .admin-main, .card-main, .verify-main { padding-top: 38px; padding-bottom: 86px; }
+.eyebrow { margin: 0 0 15px; color: var(--red); font-size: 12px; font-weight: 1000; letter-spacing: 0.14em; }
+.inner-title { max-width: 920px; margin: 0 0 24px; color: var(--blue); font-size: clamp(46px, 7vw, 94px); font-weight: 1000; line-height: 0.9; letter-spacing: -0.07em; text-transform: uppercase; }
+.inner-title em { color: var(--red); font-family: Georgia, 'Times New Roman', serif; text-transform: lowercase; }
+.inner-intro { max-width: 720px; margin: 0 0 38px; color: var(--ink); font-size: clamp(18px, 2.2vw, 27px); font-weight: 700; line-height: 1.15; }
+.body-copy { max-width: 640px; color: var(--ink); font-size: 18px; line-height: 1.35; }
+.inline-button { display: inline-flex; align-items: center; justify-content: center; width: auto; padding: 0 24px; text-decoration: none; }
+
+.manifesto-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, 0.68fr); gap: 60px; align-items: start; }
+.manifesto-sections { border-top: var(--line) solid var(--blue); }
+.manifesto-block { display: grid; grid-template-columns: 70px 1fr; gap: 18px; padding: 25px 0; border-bottom: 2px solid rgba(36, 25, 220, 0.35); }
+.block-number { color: var(--red); font-size: 17px; font-weight: 1000; }
+.manifesto-block h2 { margin: 0 0 8px; color: var(--blue); font-size: 25px; letter-spacing: -0.03em; }
+.manifesto-block p { margin: 0; color: var(--ink); font-size: 17px; line-height: 1.35; }
+.manifesto-photos { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+.manifesto-photos img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border: var(--line) solid var(--blue); box-shadow: 6px 6px 0 var(--red); }
+.manifesto-closing { max-width: 760px; margin: 48px 0 28px; color: var(--blue); font-family: Georgia, 'Times New Roman', serif; font-size: clamp(24px, 4vw, 42px); line-height: 1; }
+
+.about-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 0.62fr); gap: 90px; align-items: center; }
+.about-poster { max-width: 430px; justify-self: end; padding: 15px; background: var(--blue); border: var(--line) solid var(--blue); box-shadow: 12px 12px 0 var(--red); transform: rotate(2deg); }
+.about-poster img { display: block; width: 100%; border: 2px solid var(--orange); }
+
+.admin-main { min-height: 700px; }
+.admin-login { max-width: 680px; padding: 42px; background: var(--white); border: var(--line) solid var(--blue); box-shadow: 12px 12px 0 var(--red); }
+.admin-login-form { display: grid; gap: 10px; max-width: 520px; }
+.admin-login-form label, .manifesto-editor > label, .editable-section label { color: var(--blue); font-size: 12px; font-weight: 1000; text-transform: uppercase; letter-spacing: 0.08em; }
+.admin-login-form input, .manifesto-editor input, .manifesto-editor textarea, .editable-section input, .editable-section textarea { width: 100%; margin-top: 7px; padding: 13px 14px; color: var(--blue); background: var(--white); border: var(--line) solid var(--blue); outline: none; font: inherit; }
+.admin-login-form input:focus, .manifesto-editor input:focus, .manifesto-editor textarea:focus, .editable-section input:focus, .editable-section textarea:focus { box-shadow: inset 0 0 0 2px var(--orange); }
+.admin-dashboard[hidden], .admin-panel-content[hidden], .admin-login[hidden] { display: none; }
+.admin-heading { display: flex; justify-content: space-between; gap: 30px; align-items: end; }
+.admin-heading .inner-intro { margin-bottom: 0; }
+.admin-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.outline-button, .filter-button, .accept-button, .reject-button { display: inline-flex; align-items: center; justify-content: center; min-height: 43px; padding: 0 14px; color: var(--blue); background: transparent; border: 2px solid var(--blue); cursor: pointer; font-size: 11px; font-weight: 1000; letter-spacing: 0.05em; text-decoration: none; }
+.outline-button:hover, .outline-button:focus-visible, .filter-button.is-active, .filter-button:hover { color: var(--white); background: var(--blue); }
+.admin-tabs { display: flex; gap: 4px; margin-top: 46px; border-bottom: var(--line) solid var(--blue); }
+.admin-tab { padding: 14px 18px; color: var(--blue); background: transparent; border: 0; cursor: pointer; font-size: 13px; font-weight: 1000; text-transform: uppercase; }
+.admin-tab.is-active { color: var(--white); background: var(--blue); }
+.admin-panel-content { padding-top: 24px; }
+.filter-row { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+.filter-button { min-height: 35px; padding: 0 12px; }
+.application-list, .membership-list { display: grid; gap: 12px; }
+.application-card, .membership-row { display: flex; justify-content: space-between; gap: 22px; align-items: center; padding: 20px; background: var(--white); border: 2px solid var(--blue); }
+.application-main h2, .membership-row h2 { margin: 9px 0 4px; color: var(--blue); font-size: 26px; }
+.application-main p, .membership-row p { margin: 0; color: var(--ink); }
+.application-main small { display: block; margin-top: 8px; color: #68645d; }
+.application-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.accept-button { color: var(--white); background: var(--red); }
+.reject-button { color: var(--red); border-color: var(--red); }
+.status-pill { display: inline-block; padding: 5px 8px; color: var(--white); background: var(--blue); font-size: 10px; font-weight: 1000; letter-spacing: 0.08em; text-transform: uppercase; }
+.status-pending { background: #ba7500; }
+.status-accepted, .status-active { background: #138348; }
+.status-rejected, .status-revoked { background: var(--red); }
+.review-note { margin-top: 10px !important; padding-left: 10px; border-left: 3px solid var(--red); font-size: 13px; }
+.empty-state { color: var(--ink); font-weight: 700; }
+.manifesto-editor { display: grid; gap: 18px; max-width: 800px; }
+.field-hint { color: var(--ink); font-size: 10px; font-weight: 400; text-transform: none; letter-spacing: 0; }
+.editable-section { display: grid; gap: 10px; padding: 18px; border: 2px solid var(--blue); background: rgba(255,250,242,0.5); }
+.editable-section-head { display: flex; justify-content: space-between; color: var(--blue); }
+.remove-section { color: var(--red); background: transparent; border: 0; cursor: pointer; font-size: 11px; font-weight: 900; text-transform: uppercase; }
+.form-status.is-error { color: var(--red); }
+
+.card-main, .verify-main { min-height: 700px; }
+.membership-card { max-width: 900px; margin: 35px auto 25px; padding: 30px; color: var(--white); background: var(--blue); border: 5px solid var(--red); box-shadow: 12px 12px 0 var(--ink); }
+.card-brand { padding-bottom: 18px; border-bottom: 2px solid var(--orange); color: var(--orange); font-size: 25px; font-weight: 1000; letter-spacing: 0.05em; }
+.card-brand span { display: block; margin-top: 4px; color: var(--white); font-size: 11px; letter-spacing: 0.12em; }
+.card-content { display: flex; justify-content: space-between; gap: 35px; align-items: center; padding: 44px 0; }
+.card-label { margin: 0 0 10px; color: var(--orange); font-size: 12px; font-weight: 1000; letter-spacing: 0.12em; }
+.card-content h1 { margin: 0 0 10px; color: var(--white); font-size: clamp(44px, 7vw, 82px); letter-spacing: -0.07em; }
+.card-content p { margin: 4px 0; font-size: 18px; }
+.card-code { color: var(--orange); font-weight: 1000; letter-spacing: 0.1em; }
+.qr-wrap { padding: 12px; background: var(--white); color: var(--blue); text-align: center; }
+.qr-wrap img { display: block; width: 170px; height: 170px; }
+.qr-wrap span { display: block; margin-top: 7px; font-size: 9px; font-weight: 1000; letter-spacing: 0.08em; }
+.card-footer { padding-top: 18px; border-top: 2px solid var(--orange); color: var(--orange); font-size: 12px; font-weight: 1000; letter-spacing: 0.1em; }
+.verify-panel { max-width: 620px; margin: 30px 0; padding: 40px; background: var(--white); border: var(--line) solid var(--blue); box-shadow: 9px 9px 0 var(--red); }
+.verified-mark { display: grid; place-items: center; width: 64px; height: 64px; margin-bottom: 20px; color: var(--white); background: #138348; border-radius: 50%; font-size: 38px; font-weight: 900; }
+.verify-panel h2 { margin: 16px 0 6px; color: var(--blue); font-size: 42px; }
+.verify-panel p { color: var(--ink); font-size: 18px; }
+
+@media (max-width: 850px) {
+  .inner-main, .admin-main, .card-main, .verify-main { padding-top: 24px; padding-bottom: 62px; }
+  .manifesto-layout, .about-grid { grid-template-columns: 1fr; gap: 36px; }
+  .about-poster { justify-self: start; max-width: 330px; }
+  .admin-heading { display: block; }
+  .admin-actions { justify-content: flex-start; margin-top: 18px; }
+  .application-card, .membership-row { align-items: flex-start; flex-direction: column; }
+  .application-actions { justify-content: flex-start; }
+}
+@media (max-width: 520px) {
+  .inner-title { font-size: clamp(42px, 14vw, 68px); }
+  .manifesto-photos { grid-template-columns: 1fr 1fr; }
+  .admin-login { padding: 24px; }
+  .admin-tab { padding: 11px 9px; font-size: 10px; }
+  .card-content { flex-direction: column; align-items: flex-start; }
+  .membership-card { padding: 20px; }
+  .qr-wrap { align-self: center; }
+}

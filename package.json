@@ -1,8 +1,14 @@
 {
   "name": "sri-vishnu-student-council",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
+  "packageManager": "npm@10.9.2",
   "scripts": {
-    "start": "node server.js"
+    "migrate": "node migrate.js",
+    "start": "node migrate.js && node server.js"
+  },
+  "dependencies": {
+    "mysql2": "^3.14.1",
+    "qrcode": "^1.5.4"
   }
 }
