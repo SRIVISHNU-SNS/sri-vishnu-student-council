@@ -218,3 +218,41 @@ h1 em { color: var(--red); font-family: Georgia, 'Times New Roman', serif; font-
   .membership-card { padding: 20px; }
   .qr-wrap { align-self: center; }
 }
+
+
+/* Privacy and contact pages */
+.legal-grid { max-width: 920px; border-top: var(--line) solid var(--blue); }
+.legal-section { display: grid; grid-template-columns: 70px 1fr; gap: 20px; padding: 27px 0; border-bottom: 2px solid rgba(36, 25, 220, 0.35); }
+.legal-number { margin: 2px 0 0; color: var(--red); font-size: 17px; font-weight: 1000; }
+.legal-section h2 { margin: 0 0 9px; color: var(--blue); font-size: 26px; letter-spacing: -0.03em; }
+.legal-section p { max-width: 760px; margin: 0; color: var(--ink); font-size: 17px; line-height: 1.4; }
+.legal-section a { color: var(--red); font-weight: 900; }
+.legal-updated { margin-top: 14px !important; color: var(--red) !important; font-size: 12px !important; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
+.contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; max-width: 980px; }
+.contact-card { display: flex; min-height: 320px; flex-direction: column; align-items: flex-start; padding: 32px; background: var(--white); border: var(--line) solid var(--blue); box-shadow: 10px 10px 0 var(--red); }
+.contact-card-dark { color: var(--white); background: var(--blue); box-shadow: 10px 10px 0 var(--ink); }
+.contact-label { margin: 0 0 24px; color: var(--red); font-size: 12px; font-weight: 1000; letter-spacing: 0.14em; }
+.contact-card-dark .contact-label { color: var(--orange); }
+.contact-card h2 { margin: 0 0 15px; font-size: clamp(25px, 3vw, 40px); line-height: 0.98; letter-spacing: -0.05em; overflow-wrap: anywhere; }
+.contact-card h2 a { text-decoration-thickness: 3px; text-underline-offset: 5px; }
+.contact-card p:not(.contact-label) { max-width: 410px; margin: 0 0 28px; color: var(--ink); font-size: 16px; line-height: 1.35; }
+.contact-card-dark p:not(.contact-label) { color: var(--white); }
+.contact-card .primary-button, .contact-card .outline-button { margin-top: auto; }
+.contact-outline { color: var(--white); border-color: var(--orange); }
+.contact-outline:hover, .contact-outline:focus-visible { color: var(--blue); background: var(--orange); }
+.contact-note { display: flex; align-items: flex-start; gap: 15px; margin-top: 55px; color: var(--blue); }
+.contact-note p { margin: 0; font-size: 18px; font-weight: 1000; letter-spacing: 0.07em; }
+.contact-note strong { color: var(--red); }
+
+@media (max-width: 700px) {
+  .contact-grid { grid-template-columns: 1fr; }
+  .contact-card { min-height: 280px; padding: 25px; }
+}
+
+@media (max-width: 520px) {
+  .legal-section { grid-template-columns: 42px 1fr; gap: 12px; padding: 22px 0; }
+  .legal-section h2 { font-size: 22px; }
+  .legal-section p { font-size: 15px; }
+  .contact-note { margin-top: 40px; }
+  .contact-note p { font-size: 14px; }
+}
