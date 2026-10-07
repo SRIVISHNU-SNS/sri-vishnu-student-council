@@ -214,6 +214,23 @@ async function handleApi(req, res) {
     return sendJson(res, 200, { ok: true, downloads: row.metric_value });
   }
 
+  if (req.method === 'GET' && pathname === '/api/feedback/manifesto') {
+    const rows = getDb().prepare('SELECT id, name, message, created_at FROM manifesto_feedback ORDER BY created_at DESC, id DESC LIMIT 50').all();
+    return sendJson(res, 200, { comments: rows.map((row) => ({ id: row.id, name: row.name, message: row.message, createdAt: row.created_at })) });
+  }
+
+  if (req.method === 'POST' && pathname === '/api/feedback/manifesto') {
+    if (!sameOrigin(req)) return sendJson(res, 403, { error: 'Cross-origin feedback submissions are not accepted.' });
+    try {
+      const body = await readBody(req, 8000);
+      const name = cleanString(body.name, 80) || 'Anonymous';
+      const message = cleanString(body.message, 1200);
+      if (!message) return sendJson(res, 400, { error: 'Please write a comment before submitting.' });
+      const result = getDb().prepare('INSERT INTO manifesto_feedback (name, message) VALUES (?, ?)').run(name, message);
+      return sendJson(res, 201, { ok: true, comment: { id: result.lastInsertRowid, name, message } });
+    } catch (error) { return sendJson(res, 400, { error: error.message }); }
+  }
+
   if (req.method === 'POST' && pathname === '/api/admin/login') {
     if (!sameOrigin(req)) return sendJson(res, 403, { error: 'Cross-origin login is not accepted.' });
     try {
@@ -246,6 +263,18 @@ async function handleApi(req, res) {
     if (req.method === 'GET' && pathname === '/api/admin/analytics/manifesto') {
       const row = getDb().prepare("SELECT metric_value, updated_at FROM site_metrics WHERE metric_key = 'manifesto_downloads'").get();
       return sendJson(res, 200, { downloads: row?.metric_value || 0, updatedAt: row?.updated_at || null });
+    }
+
+    if (req.method === 'GET' && pathname === '/api/admin/feedback/manifesto') {
+      const rows = getDb().prepare('SELECT id, name, message, created_at FROM manifesto_feedback ORDER BY created_at DESC, id DESC LIMIT 200').all();
+      return sendJson(res, 200, { comments: rows.map((row) => ({ id: row.id, name: row.name, message: row.message, createdAt: row.created_at })) });
+    }
+
+    const feedbackDeleteMatch = pathname.match(/^\/api\/admin\/feedback\/manifesto\/(\d+)$/);
+    if (req.method === 'DELETE' && feedbackDeleteMatch) {
+      const result = getDb().prepare('DELETE FROM manifesto_feedback WHERE id = ?').run(Number(feedbackDeleteMatch[1]));
+      if (!result.changes) return sendJson(res, 404, { error: 'Comment not found.' });
+      return sendJson(res, 200, { ok: true });
     }
 
     if (req.method === 'GET' && pathname === '/api/admin/applications') {

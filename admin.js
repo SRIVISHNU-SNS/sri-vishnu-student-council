@@ -12,6 +12,8 @@ const documentImagesInput = document.querySelector('#document-images');
 const manifestoImagesInput = document.querySelector('#manifesto-images');
 const manifestoImageStatus = document.querySelector('#manifesto-image-status');
 const manifestoDownloadCount = document.querySelector('#manifesto-download-count');
+const adminFeedbackList = document.querySelector('#admin-feedback-list');
+const feedbackAdminStatus = document.querySelector('#feedback-admin-status');
 let manifestoState = { sections: [] };
 let documentImages = [];
 let manifestoImages = [];
@@ -33,7 +35,7 @@ async function checkSession() {
   if (session.authenticated) {
     login.hidden = true; dashboard.hidden = false;
     document.querySelector('#admin-identity').textContent = `Signed in as ${session.email}`;
-    await Promise.all([loadApplications('all'), loadManifesto(), loadMemberships(), loadManifestoAnalytics()]);
+    await Promise.all([loadApplications('all'), loadManifesto(), loadMemberships(), loadManifestoAnalytics(), loadAdminFeedback()]);
   } else { login.hidden = false; dashboard.hidden = true; }
 }
 
@@ -47,6 +49,7 @@ loginForm?.addEventListener('submit', async (event) => {
 document.querySelector('#logout-button')?.addEventListener('click', async () => { await api('/api/admin/logout', { method: 'POST' }); window.location.reload(); });
 document.querySelector('#refresh-button')?.addEventListener('click', () => checkSession());
 document.querySelector('#refresh-manifesto-analytics')?.addEventListener('click', () => loadManifestoAnalytics());
+document.querySelector('#refresh-feedback')?.addEventListener('click', () => loadAdminFeedback());
 
 document.querySelectorAll('.admin-tab').forEach((tab) => tab.addEventListener('click', () => {
   document.querySelectorAll('.admin-tab').forEach((item) => item.classList.toggle('is-active', item === tab));
@@ -150,6 +153,20 @@ async function loadManifestoAnalytics() {
     const { downloads } = await api('/api/admin/analytics/manifesto');
     if (manifestoDownloadCount) manifestoDownloadCount.textContent = Number(downloads || 0).toLocaleString();
   } catch (error) { showStatus(document.querySelector('#manifesto-status'), error.message, true); }
+}
+
+async function loadAdminFeedback() {
+  try {
+    const { comments } = await api('/api/admin/feedback/manifesto');
+    adminFeedbackList.innerHTML = comments.length ? comments.map((comment) => `<article class="admin-feedback-card"><div><strong>${escapeHtml(comment.name || 'Anonymous')}</strong><time>${escapeHtml(new Date(comment.createdAt).toLocaleString())}</time></div><p>${escapeHtml(comment.message).replace(/\n/g, '<br />')}</p><button class="reject-button" data-delete-feedback="${comment.id}" type="button">DELETE COMMENT</button></article>`).join('') : '<p class="empty-state">No visitor feedback has been posted yet.</p>';
+    adminFeedbackList.querySelectorAll('[data-delete-feedback]').forEach((button) => button.addEventListener('click', () => deleteFeedback(button.dataset.deleteFeedback)));
+  } catch (error) { showStatus(feedbackAdminStatus, error.message, true); }
+}
+
+async function deleteFeedback(id) {
+  if (!window.confirm('Delete this comment from the public manifesto page?')) return;
+  try { await api(`/api/admin/feedback/manifesto/${encodeURIComponent(id)}`, { method: 'DELETE' }); await loadAdminFeedback(); showStatus(feedbackAdminStatus, 'Comment deleted.'); }
+  catch (error) { showStatus(feedbackAdminStatus, error.message, true); }
 }
 
 function documentValues() {
