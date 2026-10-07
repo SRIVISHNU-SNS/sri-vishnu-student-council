@@ -329,3 +329,31 @@ h1 em { color: var(--red); font-family: Georgia, 'Times New Roman', serif; font-
   .official-document, .official-document * { visibility: visible !important; }
   .official-document { position: absolute !important; top: 0; left: 0; width: 100%; max-width: none; min-height: 0; margin: 0; padding: 58px 68px; border: 0; box-shadow: none; }
 }
+
+
+.manifesto-download-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: -12px 0 42px; }
+.manifesto-download-bar .outline-button { display: inline-flex; align-items: center; min-height: 54px; padding: 0 22px; text-decoration: none; }
+.manifesto-editor-intro { max-width: 740px; margin-bottom: 26px; padding-bottom: 20px; border-bottom: 3px solid var(--blue); }
+.manifesto-editor-intro h2 { margin: 0 0 10px; color: var(--blue); font-size: clamp(30px, 4vw, 48px); line-height: 0.95; letter-spacing: -0.06em; }
+.manifesto-editor-intro p:last-child { margin: 0; color: var(--ink); font-size: 17px; line-height: 1.4; }
+#manifesto-panel .manifesto-editor { max-width: 900px; padding: 28px; background: rgba(255,250,242,0.55); border: 2px solid var(--blue); }
+#manifesto-panel .manifesto-editor > label { display: block; margin-bottom: 17px; }
+#manifesto-panel .manifesto-editor input[type="file"] { padding: 10px; background: var(--white); }
+#manifesto-panel .manifesto-editor .primary-button { margin-top: 14px; }
+
+@media (max-width: 620px) {
+  .manifesto-download-bar { align-items: stretch; flex-direction: column; }
+  .manifesto-download-bar .primary-button, .manifesto-download-bar .outline-button { width: 100%; }
+  #manifesto-panel .manifesto-editor { padding: 18px; }
+}
+
+@media print {
+  .manifesto-document { display: block !important; position: absolute; top: 0; left: 0; width: 100%; max-width: none; padding: 48px 62px; background: #fffaf2; }
+  body:has(.manifesto-document) * { visibility: hidden !important; }
+  .manifesto-document, .manifesto-document * { visibility: visible !important; }
+  .manifesto-download-bar { display: none !important; }
+  .manifesto-layout { grid-template-columns: minmax(0, 1fr) 230px; gap: 30px; }
+  .manifesto-photos img { box-shadow: none; break-inside: avoid; }
+  .manifesto-block { break-inside: avoid; }
+  .manifesto-closing { margin-top: 28px; }
+}

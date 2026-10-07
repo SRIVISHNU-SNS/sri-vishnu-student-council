@@ -9,8 +9,11 @@ const officialDocumentForm = document.querySelector('#official-document-form');
 const officialDocument = document.querySelector('#official-document');
 const documentStatus = document.querySelector('#document-status');
 const documentImagesInput = document.querySelector('#document-images');
+const manifestoImagesInput = document.querySelector('#manifesto-images');
+const manifestoImageStatus = document.querySelector('#manifesto-image-status');
 let manifestoState = { sections: [] };
 let documentImages = [];
+let manifestoImages = [];
 
 async function api(url, options = {}) {
   const response = await fetch(url, { headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options });
@@ -80,10 +83,13 @@ async function saveRole(id) {
 async function loadManifesto() {
   const { content } = await api('/api/admin/content/manifesto');
   manifestoState = content || { title: '', intro: '', sections: [], closing: '', photos: [] };
+  manifestoImages = (manifestoState.photos || []).filter((photo) => /^data:image\//i.test(photo));
+  manifestoForm.elements.kicker.value = manifestoState.kicker || 'OUR MANIFESTO';
   manifestoForm.elements.title.value = manifestoState.title || '';
   manifestoForm.elements.intro.value = manifestoState.intro || '';
   manifestoForm.elements.closing.value = manifestoState.closing || '';
-  manifestoForm.elements.photos.value = (manifestoState.photos || []).join('\n');
+  manifestoForm.elements.photos.value = (manifestoState.photos || []).filter((photo) => !/^data:image\//i.test(photo)).join('\n');
+  showStatus(manifestoImageStatus, manifestoImages.length ? `${manifestoImages.length} saved image${manifestoImages.length === 1 ? '' : 's'} loaded.` : 'No uploaded images selected.');
   renderManifestoEditor();
 }
 
@@ -96,9 +102,40 @@ function renderManifestoEditor() {
 manifestoForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
   const sections = [...document.querySelectorAll('.editable-section')].map((section) => ({ heading: section.querySelector('[data-section-heading]')?.value || '', body: section.querySelector('[data-section-body]')?.value || '' }));
-  const payload = { title: manifestoForm.elements.title.value, intro: manifestoForm.elements.intro.value, closing: manifestoForm.elements.closing.value, photos: manifestoForm.elements.photos.value.split('\n').map((item) => item.trim()).filter(Boolean), sections };
+  const typedPhotos = manifestoForm.elements.photos.value.split('\n').map((item) => item.trim()).filter(Boolean);
+  const payload = { kicker: manifestoForm.elements.kicker.value, title: manifestoForm.elements.title.value, intro: manifestoForm.elements.intro.value, closing: manifestoForm.elements.closing.value, photos: [...typedPhotos, ...manifestoImages].slice(0, 8), sections };
   try { await api('/api/admin/content/manifesto', { method: 'PUT', body: JSON.stringify(payload) }); showStatus(document.querySelector('#manifesto-status'), 'Manifesto saved.'); }
   catch (error) { showStatus(document.querySelector('#manifesto-status'), error.message, true); }
+});
+
+function compressManifestoImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = reject;
+      image.onload = () => {
+        const maxSize = 1600;
+        const scale = Math.min(1, maxSize / Math.max(image.naturalWidth, image.naturalHeight));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/webp', 0.82));
+      };
+      image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+manifestoImagesInput?.addEventListener('change', async () => {
+  const files = [...manifestoImagesInput.files].slice(0, 8).filter((file) => file.type.startsWith('image/') && file.size <= 8 * 1024 * 1024);
+  try {
+    manifestoImages = await Promise.all(files.map(compressManifestoImage));
+    showStatus(manifestoImageStatus, `${manifestoImages.length} manifesto image${manifestoImages.length === 1 ? '' : 's'} ready. Save the manifesto to publish them.`);
+  } catch (error) { showStatus(manifestoImageStatus, 'One of the images could not be prepared.', true); }
 });
 
 async function loadMemberships() {

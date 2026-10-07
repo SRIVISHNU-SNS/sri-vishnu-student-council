@@ -144,6 +144,10 @@ function cleanString(value, max = 5000) {
   return String(value ?? '').trim().slice(0, max);
 }
 
+function isAllowedImage(value) {
+  return /^https?:\/\//i.test(value) || value.startsWith('/') || /^data:image\/(?:png|jpe?g|webp);base64,/i.test(value);
+}
+
 function applicationRow(row) {
   return {
     id: row.id,
@@ -253,13 +257,14 @@ async function handleApi(req, res) {
     }
 
     if (req.method === 'PUT' && pathname === '/api/admin/content/manifesto') {
-      const body = await readBody(req, 400000);
+      const body = await readBody(req, 2500000);
       const content = {
-        title: cleanString(body.title, 240),
-        intro: cleanString(body.intro, 3000),
-        sections: Array.isArray(body.sections) ? body.sections.slice(0, 8).map((section) => ({ heading: cleanString(section.heading, 120), body: cleanString(section.body, 3000) })).filter((section) => section.heading || section.body) : [],
-        closing: cleanString(body.closing, 1500),
-        photos: Array.isArray(body.photos) ? body.photos.slice(0, 8).map((photo) => cleanString(photo, 1000)).filter((photo) => /^https?:\/\//.test(photo) || photo.startsWith('/')) : []
+        kicker: cleanString(body.kicker, 160),
+        title: cleanString(body.title, 300),
+        intro: cleanString(body.intro, 5000),
+        sections: Array.isArray(body.sections) ? body.sections.slice(0, 20).map((section) => ({ heading: cleanString(section.heading, 160), body: cleanString(section.body, 5000) })).filter((section) => section.heading || section.body) : [],
+        closing: cleanString(body.closing, 3000),
+        photos: Array.isArray(body.photos) ? body.photos.slice(0, 8).map((photo) => cleanString(photo, 500000)).filter(isAllowedImage) : []
       };
       getDb().prepare('INSERT INTO site_content (content_key, content_json) VALUES (?, ?) ON CONFLICT(content_key) DO UPDATE SET content_json = excluded.content_json').run('manifesto', JSON.stringify(content));
       return sendJson(res, 200, { ok: true, content });
