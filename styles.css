@@ -529,3 +529,7 @@ h1 em { color: var(--red); font-family: Georgia, 'Times New Roman', serif; font-
 
 /* The refreshed share card intentionally uses whitespace, not a divider, between header and title. */
 .official-document-title { border-top: 0; }
+
+/* Use the full supplied letterhead logo without cropping its clipboard and wordmark. */
+.official-letterhead img { width: 112px; height: 112px; object-fit: contain; border: 4px solid var(--orange); border-radius: 14px; }
+@media (max-width: 620px) { .official-letterhead img { width: 86px; height: 86px; } }
