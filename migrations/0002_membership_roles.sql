@@ -1,0 +1,1 @@
+ALTER TABLE memberships ADD COLUMN role TEXT NOT NULL DEFAULT 'Member';

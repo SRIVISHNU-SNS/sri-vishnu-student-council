@@ -152,6 +152,7 @@ function applicationRow(row) {
     section: row.section,
     mobile: row.mobile || '',
     status: row.status,
+    role: row.role || 'Member',
     reviewNote: row.review_note || '',
     reviewerEmail: row.reviewer_email || '',
     createdAt: row.created_at,
@@ -233,7 +234,7 @@ async function handleApi(req, res) {
     if (req.method === 'GET' && pathname === '/api/admin/applications') {
       const status = cleanString(url.searchParams.get('status') || '', 20);
       const rows = getDb().prepare(`
-        SELECT a.*, m.member_code
+        SELECT a.*, m.member_code, m.role
         FROM applications a
         LEFT JOIN memberships m ON m.application_id = a.id
         ${status ? 'WHERE a.status = ?' : ''}
@@ -244,7 +245,7 @@ async function handleApi(req, res) {
 
     if (req.method === 'GET' && pathname === '/api/admin/memberships') {
       const rows = getDb().prepare('SELECT * FROM memberships ORDER BY approved_at DESC').all();
-      return sendJson(res, 200, { memberships: rows.map((row) => ({ id: row.id, memberCode: row.member_code, firstName: row.first_name, email: row.email, section: row.section, mobile: row.mobile || '', status: row.status, approvedAt: row.approved_at })) });
+      return sendJson(res, 200, { memberships: rows.map((row) => ({ id: row.id, memberCode: row.member_code, firstName: row.first_name, email: row.email, section: row.section, mobile: row.mobile || '', role: row.role || 'Member', status: row.status, approvedAt: row.approved_at })) });
     }
 
     if (req.method === 'GET' && pathname === '/api/admin/content/manifesto') {
@@ -271,6 +272,7 @@ async function handleApi(req, res) {
       const decision = body.decision === 'accepted' ? 'accepted' : body.decision === 'rejected' ? 'rejected' : null;
       if (!decision) return sendJson(res, 400, { error: 'Decision must be accepted or rejected.' });
       const reviewNote = cleanString(body.reviewNote, 2000);
+      const role = cleanString(body.role, 120) || 'Member';
       try {
         const decisionTransaction = getDb().transaction(() => {
           const application = getDb().prepare('SELECT * FROM applications WHERE id = ?').get(applicationId);
@@ -280,7 +282,9 @@ async function handleApi(req, res) {
             const existing = getDb().prepare('SELECT member_code FROM memberships WHERE application_id = ?').get(applicationId);
             memberCode = existing?.member_code || newMemberCode();
             if (!existing) {
-              getDb().prepare('INSERT INTO memberships (application_id, member_code, first_name, email, section, mobile) VALUES (?, ?, ?, ?, ?, ?)').run(applicationId, memberCode, application.first_name, application.email, application.section, application.mobile || null);
+              getDb().prepare('INSERT INTO memberships (application_id, member_code, first_name, email, section, mobile, role) VALUES (?, ?, ?, ?, ?, ?, ?)').run(applicationId, memberCode, application.first_name, application.email, application.section, application.mobile || null, role);
+            } else {
+              getDb().prepare('UPDATE memberships SET role = ? WHERE application_id = ?').run(role, applicationId);
             }
           }
           getDb().prepare('UPDATE applications SET status = ?, review_note = ?, reviewer_email = ? WHERE id = ?').run(decision, reviewNote || null, admin.email, applicationId);
@@ -297,10 +301,10 @@ async function handleApi(req, res) {
 
   const membershipMatch = pathname.match(/^\/api\/memberships\/([A-Za-z0-9-]+)$/);
   if (req.method === 'GET' && membershipMatch) {
-    const rows = [getDb().prepare('SELECT member_code, first_name, section, status, approved_at FROM memberships WHERE member_code = ?').get(membershipMatch[1])].filter(Boolean);
+    const rows = [getDb().prepare('SELECT member_code, first_name, section, role, status, approved_at FROM memberships WHERE member_code = ?').get(membershipMatch[1])].filter(Boolean);
     const member = rows[0];
     if (!member || member.status !== 'active') return sendJson(res, 404, { error: 'Membership not found or inactive.' });
-    return sendJson(res, 200, { member: { memberCode: member.member_code, firstName: member.first_name, section: member.section, status: member.status, approvedAt: member.approved_at } });
+    return sendJson(res, 200, { member: { memberCode: member.member_code, firstName: member.first_name, section: member.section, role: member.role || 'Member', status: member.status, approvedAt: member.approved_at } });
   }
 
   const qrMatch = pathname.match(/^\/api\/memberships\/([A-Za-z0-9-]+)\/qr$/);

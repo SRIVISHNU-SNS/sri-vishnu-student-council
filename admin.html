@@ -1,18 +1,55 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Admin — Sri Vishnu for Students General Council</title><link rel="stylesheet" href="/styles.css" />  <link rel="icon" href="/favicon.ico" sizes="any" />
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Sri Vishnu for Students General Council</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
   <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 </head>
-<body class="inner-page admin-page"><div class="top-strip" aria-hidden="true"></div><div class="page-shell">
-<header class="site-header site-wrap"><a class="wordmark" href="/" aria-label="Sri Vishnu for Students General Council home"><img src="/logo.webp" alt="Sri Vishnu for Students General Council" /></a><div class="header-tools"><p class="header-note">ADMIN CONSOLE</p><button class="header-link" id="logout-button" type="button">LOG OUT</button><button class="menu-toggle" type="button" aria-controls="main-nav" aria-expanded="false">MENU</button></div><nav class="main-nav" id="main-nav" aria-label="Primary navigation"><a href="/">Home</a><a href="/manifesto.html">Manifesto</a><a href="/about.html">About</a></nav></header>
-<main class="admin-main site-wrap">
-<section class="admin-login panel" id="admin-login"><p class="eyebrow">ADMIN ACCESS</p><h1 class="inner-title">Review the team.</h1><p class="inner-intro">Enter the configured admin email to open the review dashboard.</p><form id="admin-login-form" class="admin-login-form"><label for="admin-email">Admin email</label><input id="admin-email" type="email" placeholder="Admin email" required /><button class="primary-button" type="submit">OPEN DASHBOARD</button><p class="form-status" id="login-status" role="status"></p></form></section>
-<section class="admin-dashboard" id="admin-dashboard" hidden><div class="admin-heading"><div><p class="eyebrow">ADMIN CONSOLE</p><h1 class="inner-title">Applications &amp; members.</h1><p class="inner-intro" id="admin-identity"></p></div><div class="admin-actions"><button class="outline-button" id="refresh-button" type="button">REFRESH</button><a class="outline-button" href="/manifesto.html">VIEW MANIFESTO</a></div></div>
-<div class="admin-tabs" role="tablist"><button class="admin-tab is-active" data-tab="applications" type="button">Applications</button><button class="admin-tab" data-tab="manifesto" type="button">Edit manifesto</button><button class="admin-tab" data-tab="memberships" type="button">Memberships</button></div>
-<div class="admin-panel-content" id="applications-panel"><div class="filter-row"><button class="filter-button is-active" data-status="all" type="button">All</button><button class="filter-button" data-status="pending" type="button">Pending</button><button class="filter-button" data-status="accepted" type="button">Accepted</button><button class="filter-button" data-status="rejected" type="button">Rejected</button></div><div class="application-list" id="application-list"></div></div>
-<div class="admin-panel-content" id="manifesto-panel" hidden><form id="manifesto-form" class="manifesto-editor"><label>Title<input name="title" type="text" required /></label><label>Intro<textarea name="intro" rows="4"></textarea></label><div id="manifesto-section-editor"></div><button class="outline-button" id="add-section" type="button">+ ADD SECTION</button><label>Closing line<input name="closing" type="text" /></label><label>Photo URLs <span class="field-hint">One URL per line. Use /sri-vishnu-poster.webp for project assets.</span><textarea name="photos" rows="4"></textarea></label><button class="primary-button" type="submit">SAVE MANIFESTO</button><p class="form-status" id="manifesto-status" role="status"></p></form></div>
-<div class="admin-panel-content" id="memberships-panel" hidden><div class="membership-list" id="membership-list"></div></div>
-</section></main>
-<footer class="site-footer"><div class="site-wrap footer-inner"><div class="footer-left"><div class="footer-lockup">SRI VISHNU<br /><span>FOR STUDENTS GENERAL COUNCIL</span></div><p class="footer-copy">Listen.<br />Represent.<br />Deliver.</p></div><div class="footer-right"><p><a href="/">Public site</a><span class="divider">|</span><a href="/manifesto.html">Manifesto</a></p><p class="footer-small">Private review dashboard.</p></div></div></footer>
-</div><script src="/script.js"></script><script src="/admin.js"></script></body></html>
+<body class="inner-page admin-page">
+  <div class="top-strip" aria-hidden="true"></div>
+  <div class="page-shell">
+    <header class="site-header site-wrap">
+      <a class="wordmark" href="/" aria-label="Sri Vishnu for Students General Council home"><img src="/logo.webp" alt="Sri Vishnu for Students General Council" /></a>
+      <div class="header-tools"><p class="header-note">ADMIN CONSOLE</p><button class="header-link" id="logout-button" type="button">LOG OUT</button><button class="menu-toggle" type="button" aria-controls="main-nav" aria-expanded="false">MENU</button></div>
+      <nav class="main-nav" id="main-nav" aria-label="Primary navigation"><a href="/">Home</a><a href="/manifesto.html">Manifesto</a><a href="/about.html">About</a></nav>
+    </header>
+    <main class="admin-main site-wrap">
+      <section class="admin-login panel" id="admin-login"><p class="eyebrow">ADMIN ACCESS</p><h1 class="inner-title">Review the team.</h1><p class="inner-intro">Enter the configured admin email to open the review dashboard.</p><form id="admin-login-form" class="admin-login-form"><label for="admin-email">Admin email</label><input id="admin-email" type="email" placeholder="Admin email" required /><button class="primary-button" type="submit">OPEN DASHBOARD</button><p class="form-status" id="login-status" role="status"></p></form></section>
+      <section class="admin-dashboard" id="admin-dashboard" hidden>
+        <div class="admin-heading"><div><p class="eyebrow">ADMIN CONSOLE</p><h1 class="inner-title">Applications &amp; members.</h1><p class="inner-intro" id="admin-identity"></p></div><div class="admin-actions"><button class="outline-button" id="refresh-button" type="button">REFRESH</button><a class="outline-button" href="/manifesto.html">VIEW MANIFESTO</a></div></div>
+        <div class="admin-tabs" role="tablist"><button class="admin-tab is-active" data-tab="applications" type="button">Applications</button><button class="admin-tab" data-tab="manifesto" type="button">Edit manifesto</button><button class="admin-tab" data-tab="memberships" type="button">Memberships</button><button class="admin-tab" data-tab="documents" type="button">Official documents</button></div>
+        <div class="admin-panel-content" id="applications-panel"><div class="filter-row"><button class="filter-button is-active" data-status="all" type="button">All</button><button class="filter-button" data-status="pending" type="button">Pending</button><button class="filter-button" data-status="accepted" type="button">Accepted</button><button class="filter-button" data-status="rejected" type="button">Rejected</button></div><div class="application-list" id="application-list"></div></div>
+        <div class="admin-panel-content" id="manifesto-panel" hidden><form id="manifesto-form" class="manifesto-editor"><label>Title<input name="title" type="text" required /></label><label>Intro<textarea name="intro" rows="4"></textarea></label><div id="manifesto-section-editor"></div><button class="outline-button" id="add-section" type="button">+ ADD SECTION</button><label>Closing line<input name="closing" type="text" /></label><label>Photo URLs <span class="field-hint">One URL per line. Use /sri-vishnu-poster.webp for project assets.</span><textarea name="photos" rows="4"></textarea></label><button class="primary-button" type="submit">SAVE MANIFESTO</button><p class="form-status" id="manifesto-status" role="status"></p></form></div>
+        <div class="admin-panel-content" id="memberships-panel" hidden><div class="membership-list" id="membership-list"></div></div>
+        <div class="admin-panel-content" id="documents-panel" hidden>
+          <div class="document-builder-intro"><p class="eyebrow">OFFICIAL COMMUNICATIONS</p><h2>Create a formal document.</h2><p>Write your own statement, add as many paragraphs as you need, include images, and preview the finished letterhead before printing or saving it as a PDF.</p></div>
+          <form id="official-document-form" class="official-generator">
+            <div class="generator-grid">
+              <label>Document title<input name="title" type="text" value="OFFICIAL COMMUNICATION" required /></label>
+              <label>Date<input name="date" type="date" required /></label>
+              <label>Recipient / To<input name="recipient" type="text" placeholder="Name, class, organisation, or To whom it may concern" /></label>
+              <label>Subject<input name="subject" type="text" placeholder="Subject of this communication" /></label>
+              <label class="full-field">Opening / salutation<input name="greeting" type="text" value="Dear Sir / Madam," /></label>
+              <label class="full-field">Your statement and paragraphs <span class="field-hint">Separate paragraphs with a blank line. Line breaks inside a paragraph are preserved.</span><textarea name="body" rows="12" placeholder="Write your official statement here..."></textarea></label>
+              <label>Signatory name<input name="signatory" type="text" placeholder="Your full name" /></label>
+              <label>Signatory role<input name="signatoryRole" type="text" placeholder="President / Secretary / Council Representative" /></label>
+              <label class="full-field">Footer details<input name="footer" type="text" value="Sri Vishnu for Students General Council · srivishnusnsct@gmail.com" /></label>
+              <label class="full-field">Add images <span class="field-hint">Optional. Choose up to 3 images for the letter. They are included in the preview and printed PDF.</span><input id="document-images" type="file" accept="image/*" multiple /></label>
+            </div>
+            <div class="generator-actions"><button class="primary-button" type="submit">GENERATE PREVIEW</button><button class="outline-button" id="print-document" type="button">PRINT / SAVE PDF</button></div>
+            <p class="form-status" id="document-status" role="status"></p>
+          </form>
+          <article class="official-document" id="official-document" hidden></article>
+        </div>
+      </section>
+    </main>
+    <footer class="site-footer"><div class="site-wrap footer-inner"><div class="footer-left"><div class="footer-lockup">SRI VISHNU<br /><span>FOR STUDENTS GENERAL COUNCIL</span></div><p class="footer-copy">Listen.<br />Represent.<br />Deliver.</p></div><div class="footer-right"><p><a href="/">Public site</a><span class="divider">|</span><a href="/manifesto.html">Manifesto</a></p><p class="footer-small">Private review dashboard.</p></div></div></footer>
+  </div>
+  <script src="/script.js"></script><script src="/admin.js"></script>
+</body>
+</html>

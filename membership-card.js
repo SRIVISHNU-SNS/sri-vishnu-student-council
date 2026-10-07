@@ -49,9 +49,10 @@ async function drawCardCanvas() {
   context.fillText(name.length > 22 ? `${name.slice(0, 21)}…` : name, 82, 365);
   context.font = '32px Arial, Helvetica, sans-serif';
   context.fillText(`Section: ${member.section || ''}`, 86, 425);
+  context.fillText(`Role: ${member.role || 'Member'}`, 86, 470);
   context.fillStyle = '#ffad08';
   context.font = '900 28px Arial, Helvetica, sans-serif';
-  context.fillText(member.memberCode || '', 86, 490);
+  context.fillText(member.memberCode || '', 86, 525);
 
   const qr = new Image();
   qr.src = qrDataUrl;
@@ -141,6 +142,7 @@ async function loadCard() {
   qrDataUrl = qr.dataUrl;
   document.querySelector('#member-name').textContent = member.firstName;
   document.querySelector('#member-section').textContent = `Section: ${member.section}`;
+  document.querySelector('#member-role').textContent = `Role: ${member.role || 'Member'}`;
   document.querySelector('#member-code').textContent = member.memberCode;
   document.querySelector('#member-qr').src = qrDataUrl;
   downloadControls.hidden = false;

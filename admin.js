@@ -5,7 +5,12 @@ const loginStatus = document.querySelector('#login-status');
 const applicationList = document.querySelector('#application-list');
 const membershipList = document.querySelector('#membership-list');
 const manifestoForm = document.querySelector('#manifesto-form');
+const officialDocumentForm = document.querySelector('#official-document-form');
+const officialDocument = document.querySelector('#official-document');
+const documentStatus = document.querySelector('#document-status');
+const documentImagesInput = document.querySelector('#document-images');
 let manifestoState = { sections: [] };
+let documentImages = [];
 
 async function api(url, options = {}) {
   const response = await fetch(url, { headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options });
@@ -15,7 +20,9 @@ async function api(url, options = {}) {
 }
 
 function escapeHtml(value) { return String(value || '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char])); }
-function showStatus(element, message, error = false) { element.textContent = message; element.classList.toggle('is-error', error); }
+function escapeAttribute(value) { return escapeHtml(value).replace(/javascript:/gi, ''); }
+function showStatus(element, message, error = false) { if (!element) return; element.textContent = message; element.classList.toggle('is-error', error); }
+function safeImageSource(value) { const source = String(value || ''); return /^(data:image\/|https:\/\/|http:\/\/|\/)/i.test(source) ? source : ''; }
 
 async function checkSession() {
   const session = await api('/api/admin/session');
@@ -51,14 +58,22 @@ document.querySelector('#add-section')?.addEventListener('click', () => { manife
 async function loadApplications(status) {
   try {
     const { applications } = await api(`/api/admin/applications${status === 'all' ? '' : `?status=${encodeURIComponent(status)}`}`);
-    applicationList.innerHTML = applications.length ? applications.map((application) => `<article class="application-card"><div class="application-main"><span class="status-pill status-${application.status}">${application.status}</span><h2>${escapeHtml(application.firstName)}</h2><p>${escapeHtml(application.email)} · ${escapeHtml(application.section)}${application.mobile ? ` · ${escapeHtml(application.mobile)}` : ''}</p><small>Applied ${new Date(application.createdAt).toLocaleString()}</small>${application.reviewNote ? `<p class="review-note">${escapeHtml(application.reviewNote)}</p>` : ''}</div><div class="application-actions">${application.status === 'accepted' && application.memberCode ? `<a class="outline-button" href="/membership-card.html?code=${encodeURIComponent(application.memberCode)}" target="_blank">VIEW CARD</a>` : ''}${application.status !== 'accepted' ? `<button class="accept-button" data-id="${application.id}" type="button">ACCEPT</button>` : ''}${application.status !== 'rejected' ? `<button class="reject-button" data-id="${application.id}" type="button">REJECT</button>` : ''}</div></article>`).join('') : '<p class="empty-state">No applications in this view.</p>';
-    applicationList.querySelectorAll('[data-id]').forEach((button) => button.addEventListener('click', () => decideApplication(button.dataset.id, button.classList.contains('accept-button') ? 'accepted' : 'rejected')));
+    applicationList.innerHTML = applications.length ? applications.map((application) => `<article class="application-card"><div class="application-main"><span class="status-pill status-${escapeAttribute(application.status)}">${escapeHtml(application.status)}</span><h2>${escapeHtml(application.firstName)}</h2><p>${escapeHtml(application.email)} · ${escapeHtml(application.section)}${application.mobile ? ` · ${escapeHtml(application.mobile)}` : ''}</p><small>Applied ${new Date(application.createdAt).toLocaleString()}</small>${application.reviewNote ? `<p class="review-note">${escapeHtml(application.reviewNote)}</p>` : ''}</div><div class="application-actions"><label class="role-control">ASSIGN ROLE<input data-role-id="${application.id}" type="text" maxlength="120" value="${escapeAttribute(application.role || 'Member')}" placeholder="Member / President / Any role" /></label>${application.status === 'accepted' && application.memberCode ? `<a class="outline-button" href="/membership-card.html?code=${encodeURIComponent(application.memberCode)}" target="_blank">VIEW CARD</a><button class="role-button" data-role-save="${application.id}" type="button">SAVE ROLE</button>` : ''}${application.status !== 'accepted' ? `<button class="accept-button" data-id="${application.id}" data-decision="accepted" type="button">ACCEPT</button>` : ''}${application.status !== 'rejected' ? `<button class="reject-button" data-id="${application.id}" data-decision="rejected" type="button">REJECT</button>` : ''}</div></article>`).join('') : '<p class="empty-state">No applications in this view.</p>';
+    applicationList.querySelectorAll('button[data-id]').forEach((button) => button.addEventListener('click', () => decideApplication(button.dataset.id, button.dataset.decision)));
+    applicationList.querySelectorAll('[data-role-save]').forEach((button) => button.addEventListener('click', () => saveRole(button.dataset.roleSave)));
   } catch (error) { applicationList.innerHTML = `<p class="form-status is-error">${escapeHtml(error.message)}</p>`; }
 }
 
+function roleForApplication(id) { return document.querySelector(`[data-role-id="${CSS.escape(String(id))}"]`)?.value.trim() || 'Member'; }
+
 async function decideApplication(id, decision) {
   const reviewNote = window.prompt(decision === 'accepted' ? 'Optional note for this accepted application:' : 'Optional reason for rejecting this application:', '') ?? '';
-  try { const result = await api(`/api/admin/applications/${id}/decision`, { method: 'POST', body: JSON.stringify({ decision, reviewNote }) }); await loadApplications('all'); await loadMemberships(); if (result.memberCode) window.open(`/membership-card.html?code=${encodeURIComponent(result.memberCode)}`, '_blank'); }
+  try { const result = await api(`/api/admin/applications/${id}/decision`, { method: 'POST', body: JSON.stringify({ decision, reviewNote, role: roleForApplication(id) }) }); await loadApplications('all'); await loadMemberships(); if (result.memberCode) window.open(`/membership-card.html?code=${encodeURIComponent(result.memberCode)}`, '_blank'); }
+  catch (error) { window.alert(error.message); }
+}
+
+async function saveRole(id) {
+  try { await api(`/api/admin/applications/${id}/decision`, { method: 'POST', body: JSON.stringify({ decision: 'accepted', role: roleForApplication(id), reviewNote: '' }) }); await loadApplications('all'); await loadMemberships(); }
   catch (error) { window.alert(error.message); }
 }
 
@@ -74,7 +89,7 @@ async function loadManifesto() {
 
 function renderManifestoEditor() {
   const editor = document.querySelector('#manifesto-section-editor');
-  editor.innerHTML = (manifestoState.sections || []).map((section, index) => `<div class="editable-section"><div class="editable-section-head"><strong>Section ${index + 1}</strong><button class="remove-section" data-index="${index}" type="button">Remove</button></div><label>Heading<input data-section-heading="${index}" type="text" value="${escapeHtml(section.heading)}" /></label><label>Body<textarea data-section-body="${index}" rows="4">${escapeHtml(section.body)}</textarea></label></div>`).join('');
+  editor.innerHTML = (manifestoState.sections || []).map((section, index) => `<div class="editable-section"><div class="editable-section-head"><strong>Section ${index + 1}</strong><button class="remove-section" data-index="${index}" type="button">Remove</button></div><label>Heading<input data-section-heading="${index}" type="text" value="${escapeAttribute(section.heading)}" /></label><label>Body<textarea data-section-body="${index}" rows="4">${escapeHtml(section.body)}</textarea></label></div>`).join('');
   editor.querySelectorAll('.remove-section').forEach((button) => button.addEventListener('click', () => { manifestoState.sections.splice(Number(button.dataset.index), 1); renderManifestoEditor(); }));
 }
 
@@ -88,7 +103,36 @@ manifestoForm?.addEventListener('submit', async (event) => {
 
 async function loadMemberships() {
   const { memberships } = await api('/api/admin/memberships');
-  membershipList.innerHTML = memberships.length ? memberships.map((member) => `<article class="membership-row"><div><span class="status-pill status-${member.status}">${member.status}</span><h2>${escapeHtml(member.firstName)}</h2><p>${escapeHtml(member.memberCode)} · ${escapeHtml(member.section)} · ${escapeHtml(member.email)}</p></div><a class="outline-button" href="/membership-card.html?code=${encodeURIComponent(member.memberCode)}" target="_blank">OPEN CARD</a></article>`).join('') : '<p class="empty-state">No memberships yet. Accept an application to create one.</p>';
+  membershipList.innerHTML = memberships.length ? memberships.map((member) => `<article class="membership-row"><div><span class="status-pill status-${escapeAttribute(member.status)}">${escapeHtml(member.status)}</span><h2>${escapeHtml(member.firstName)}</h2><p><strong>${escapeHtml(member.role || 'Member')}</strong> · ${escapeHtml(member.memberCode)} · ${escapeHtml(member.section)} · ${escapeHtml(member.email)}</p></div><a class="outline-button" href="/membership-card.html?code=${encodeURIComponent(member.memberCode)}" target="_blank">OPEN CARD</a></article>`).join('') : '<p class="empty-state">No memberships yet. Accept an application to create one.</p>';
 }
 
+function documentValues() {
+  const form = officialDocumentForm.elements;
+  return { title: form.title.value.trim(), date: form.date.value, recipient: form.recipient.value.trim(), subject: form.subject.value.trim(), greeting: form.greeting.value.trim(), body: form.body.value.trim(), signatory: form.signatory.value.trim(), signatoryRole: form.signatoryRole.value.trim(), footer: form.footer.value.trim() };
+}
+
+function renderOfficialDocument() {
+  const value = documentValues();
+  const paragraphs = value.body ? value.body.split(/\n\s*\n/).map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, '<br />')}</p>`).join('') : '<p class="document-placeholder">Your document statement will appear here.</p>';
+  const images = documentImages.map((image) => `<img src="${escapeAttribute(safeImageSource(image))}" alt="Document attachment" />`).join('');
+  officialDocument.innerHTML = `<div class="official-letterhead"><img src="/logo.webp" alt="Sri Vishnu for Students General Council" /><div><p>SRI VISHNU FOR STUDENTS GENERAL COUNCIL</p><span>LISTEN · REPRESENT · DELIVER</span></div><span class="document-mark">OFFICIAL</span></div><div class="official-document-title"><p>${escapeHtml(value.title || 'OFFICIAL COMMUNICATION')}</p><time>${escapeHtml(value.date || '')}</time></div>${value.recipient ? `<p class="document-recipient"><strong>To:</strong> ${escapeHtml(value.recipient)}</p>` : ''}${value.subject ? `<p class="document-subject"><strong>Subject:</strong> ${escapeHtml(value.subject)}</p>` : ''}<p class="document-greeting">${escapeHtml(value.greeting || 'Dear Sir / Madam,')}</p><div class="document-body">${paragraphs}</div>${images ? `<div class="official-document-images">${images}</div>` : ''}<div class="document-signature"><p>Yours sincerely,</p><strong>${escapeHtml(value.signatory || 'Authorized Representative')}</strong><span>${escapeHtml(value.signatoryRole || 'Sri Vishnu for Students General Council')}</span></div><div class="official-document-footer">${escapeHtml(value.footer || '')}</div>`;
+  officialDocument.hidden = false;
+}
+
+officialDocumentForm?.addEventListener('submit', (event) => { event.preventDefault(); renderOfficialDocument(); showStatus(documentStatus, 'Preview generated. Review it below, then print or save as PDF.'); officialDocument.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+
+document.querySelector('#print-document')?.addEventListener('click', () => { if (officialDocument.hidden) renderOfficialDocument(); setTimeout(() => window.print(), 100); });
+
+documentImagesInput?.addEventListener('change', () => {
+  const files = [...documentImagesInput.files].slice(0, 3);
+  documentImages = [];
+  files.forEach((file) => {
+    if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) return;
+    const reader = new FileReader();
+    reader.onload = () => { documentImages.push(reader.result); showStatus(documentStatus, `${documentImages.length} image${documentImages.length === 1 ? '' : 's'} ready for the document.`); };
+    reader.readAsDataURL(file);
+  });
+});
+
+officialDocumentForm?.elements.date && (officialDocumentForm.elements.date.value = new Date().toISOString().slice(0, 10));
 checkSession().catch((error) => showStatus(loginStatus, error.message, true));
