@@ -16,7 +16,7 @@
     <header class="site-header site-wrap">
       <a class="wordmark" href="/" aria-label="Sri Vishnu for Students General Council home"><img src="/logo.webp" alt="Sri Vishnu for Students General Council" /></a>
       <div class="header-tools"><p class="header-note">ADMIN CONSOLE</p><button class="header-link" id="logout-button" type="button">LOG OUT</button><button class="menu-toggle" type="button" aria-controls="main-nav" aria-expanded="false">MENU</button></div>
-      <nav class="main-nav" id="main-nav" aria-label="Primary navigation"><a href="/">Home</a><a href="/manifesto.html">Manifesto</a><a href="/about.html">About</a></nav>
+      <nav class="main-nav" id="main-nav" aria-label="Primary navigation"><a href="/">Home</a><a href="/manifesto.html">Manifesto</a><details class="nav-group"><summary>Campaign</summary><div class="nav-submenu"><a href="/poll.html">Student priorities</a><a href="/candidate.html">Candidate profile</a></div></details><a href="/about.html">About</a><a href="/#join">Join the Team</a></nav>
     </header>
     <main class="admin-main site-wrap">
       <section class="admin-login panel" id="admin-login"><p class="eyebrow">ADMIN ACCESS</p><h1 class="inner-title">Review the team.</h1><p class="inner-intro">Enter the configured admin email to open the review dashboard.</p><form id="admin-login-form" class="admin-login-form"><label for="admin-email">Admin email</label><input id="admin-email" type="email" placeholder="Admin email" required /><button class="primary-button" type="submit">OPEN DASHBOARD</button><p class="form-status" id="login-status" role="status"></p></form></section>

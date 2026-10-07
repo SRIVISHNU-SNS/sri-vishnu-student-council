@@ -467,3 +467,27 @@ h1 em { color: var(--red); font-family: Georgia, 'Times New Roman', serif; font-
 @media (max-width: 760px) { .candidate-hero, .candidate-promises { grid-template-columns: 1fr; } .candidate-photo-frame { max-width: 420px; } .promise-editor { grid-template-columns: 1fr; } }
 @media (max-width: 520px) { .poll-card { box-shadow: 7px 7px 0 var(--red); } .poll-option strong { font-size: 14px; } .candidate-actions { flex-direction: column; } .candidate-actions .primary-button, .candidate-actions .outline-button { width: 100%; } .poll-admin-status-row, .poll-report { align-items: flex-start; flex-direction: column; } .campaign-editor { padding: 18px; } }
 @media print { .candidate-page .site-header, .candidate-page .site-footer, .candidate-page .candidate-actions, .candidate-page .candidate-connect { display: none !important; } .candidate-page { background: #fffaf2; } .candidate-main { padding: 0 30px; } .candidate-hero { grid-template-columns: 0.62fr 1fr; } .candidate-promises { margin-top: 40px; } }
+
+
+/* Compact grouped navigation */
+.nav-group { position: relative; }
+.nav-group summary { list-style: none; cursor: pointer; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+.nav-group summary::-webkit-details-marker { display: none; }
+.nav-group summary::after { content: ' +'; color: var(--red); font-size: 14px; text-decoration: none; }
+.nav-group[open] summary::after { content: ' −'; }
+.nav-submenu { position: absolute; z-index: 8; top: calc(100% + 13px); right: -12px; display: grid; min-width: 190px; padding: 8px; background: var(--white); border: 3px solid var(--blue); box-shadow: 6px 6px 0 var(--red); }
+.nav-submenu a { padding: 12px 14px; color: var(--blue); text-decoration: none; white-space: nowrap; }
+.nav-submenu a:hover, .nav-submenu a:focus-visible { color: var(--white); background: var(--blue); }
+.success-enter { animation: successReveal 620ms cubic-bezier(.2,.9,.25,1.2) both; }
+.success-enter .thanks-mark { animation: successMark 680ms 120ms cubic-bezier(.2,.9,.25,1.35) both; }
+.success-enter h2 { animation: successText 500ms 180ms ease-out both; }
+@keyframes successReveal { 0% { opacity: 0; transform: translateY(28px) scale(.96); } 55% { opacity: 1; transform: translateY(-6px) scale(1.015); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes successMark { 0% { opacity: 0; transform: scale(.25) rotate(-25deg); } 70% { opacity: 1; transform: scale(1.12) rotate(4deg); } 100% { opacity: 1; transform: scale(1) rotate(0); } }
+@keyframes successText { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .success-enter, .success-enter .thanks-mark, .success-enter h2 { animation: none; } }
+@media (max-width: 850px) {
+  .main-nav .nav-group { width: 100%; }
+  .main-nav .nav-group summary { display: block; padding: 0; }
+  .main-nav .nav-submenu { position: static; min-width: 0; margin-top: 10px; padding: 4px; box-shadow: none; border-width: 2px; }
+  .main-nav .nav-submenu a { padding: 10px 12px; }
+}

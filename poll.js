@@ -33,6 +33,9 @@ pollForm.addEventListener('submit', async (event) => {
     if (!response.ok) throw new Error(data.error || 'Your response could not be recorded.');
     pollForm.hidden = true;
     pollThanks.hidden = false;
+    pollThanks.classList.remove('success-enter');
+    void pollThanks.offsetWidth;
+    pollThanks.classList.add('success-enter');
   } catch (error) {
     showStatus(error.message, true);
     pollSubmit.disabled = false;

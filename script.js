@@ -13,6 +13,7 @@ if (menuToggle && mainNav) {
     link.addEventListener('click', () => {
       mainNav.classList.remove('is-open');
       menuToggle.setAttribute('aria-expanded', 'false');
+      mainNav.querySelectorAll('.nav-group[open]').forEach((group) => { group.removeAttribute('open'); });
     });
   });
 }
