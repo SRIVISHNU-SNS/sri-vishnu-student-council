@@ -533,3 +533,21 @@ h1 em { color: var(--red); font-family: Georgia, 'Times New Roman', serif; font-
 /* Use the full supplied letterhead logo without cropping its clipboard and wordmark. */
 .official-letterhead img { width: 112px; height: 112px; object-fit: contain; border: 4px solid var(--orange); border-radius: 14px; }
 @media (max-width: 620px) { .official-letterhead img { width: 86px; height: 86px; } }
+
+/* Narrow-phone header safeguards */
+@media (max-width: 850px) {
+  .site-header { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
+  .wordmark { min-width: 0; }
+  .main-nav { right: 0; width: min(260px, calc(100vw - 32px)); max-height: calc(100dvh - 118px); overflow-y: auto; overscroll-behavior: contain; }
+}
+@media (max-width: 520px) {
+  .site-header { gap: 8px; }
+  .wordmark { width: min(220px, 68vw); }
+  .menu-toggle { flex: 0 0 auto; padding-right: 11px; padding-left: 11px; }
+  .main-nav { top: 90px; max-height: calc(100dvh - 106px); }
+}
+@media (max-width: 360px) {
+  .site-wrap { width: calc(100% - 24px); }
+  .wordmark { width: min(190px, 62vw); }
+  .main-nav { width: calc(100vw - 24px); }
+}
