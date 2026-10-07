@@ -30,21 +30,21 @@
         <div class="admin-panel-content" id="memberships-panel" hidden><div class="membership-list" id="membership-list"></div></div>
         <div class="admin-panel-content" id="feedback-panel" hidden><div class="feedback-admin-heading"><div><p class="eyebrow">COMMUNITY FEEDBACK</p><h2>Review student voices.</h2><p>Delete any comment that is abusive, irrelevant, or no longer appropriate for the public manifesto page.</p></div><button class="outline-button" id="refresh-feedback" type="button">REFRESH FEEDBACK</button></div><div class="admin-feedback-list" id="admin-feedback-list"></div><p class="form-status" id="feedback-admin-status" role="status"></p></div>
         <div class="admin-panel-content" id="documents-panel" hidden>
-          <div class="document-builder-intro"><p class="eyebrow">OFFICIAL COMMUNICATIONS</p><h2>Create a formal document.</h2><p>Write your own statement, add as many paragraphs as you need, include images, and preview the finished letterhead before printing or saving it as a PDF.</p></div>
+          <div class="document-builder-intro"><p class="eyebrow">CAMPAIGN COMMUNICATIONS</p><h2>Make something worth sharing.</h2><p>Write a statement, add your own images, and create a bold campaign card that feels natural on Instagram, WhatsApp, or a printed page.</p></div>
           <form id="official-document-form" class="official-generator">
             <div class="generator-grid">
-              <label>Document title<input name="title" type="text" value="OFFICIAL COMMUNICATION" required /></label>
+              <label>Document title<input name="title" type="text" value="CAMPAIGN UPDATE" required /></label>
               <label>Date<input name="date" type="date" required /></label>
               <label>Recipient / To<input name="recipient" type="text" placeholder="Name, class, organisation, or To whom it may concern" /></label>
               <label>Subject<input name="subject" type="text" placeholder="Subject of this communication" /></label>
-              <label class="full-field">Opening / salutation<input name="greeting" type="text" value="Dear Sir / Madam," /></label>
+              <label class="full-field">Opening / salutation<input name="greeting" type="text" value="Hey everyone," /></label>
               <label class="full-field">Your statement and paragraphs <span class="field-hint">Separate paragraphs with a blank line. Line breaks inside a paragraph are preserved.</span><textarea name="body" rows="12" placeholder="Write your official statement here..."></textarea></label>
               <label>Signatory name<input name="signatory" type="text" placeholder="Your full name" /></label>
               <label>Signatory role<input name="signatoryRole" type="text" placeholder="President / Secretary / Council Representative" /></label>
               <label class="full-field">Footer details<input name="footer" type="text" value="Sri Vishnu for Students General Council · srivishnusnsct@gmail.com" /></label>
               <label class="full-field">Add images <span class="field-hint">Optional. Choose up to 3 images for the letter. They are included in the preview and printed PDF.</span><input id="document-images" type="file" accept="image/*" multiple /></label>
             </div>
-            <div class="generator-actions"><button class="primary-button" type="submit">GENERATE PREVIEW</button><button class="outline-button" id="print-document" type="button">PRINT / SAVE PDF</button></div>
+            <div class="generator-actions"><button class="primary-button" type="submit">MAKE PREVIEW</button><button class="outline-button" id="print-document" type="button">SHARE / SAVE PDF</button></div>
             <p class="form-status" id="document-status" role="status"></p>
           </form>
           <article class="official-document" id="official-document" hidden></article>

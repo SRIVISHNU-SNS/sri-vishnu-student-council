@@ -491,3 +491,41 @@ h1 em { color: var(--red); font-family: Georgia, 'Times New Roman', serif; font-
   .main-nav .nav-submenu { position: static; min-width: 0; margin-top: 10px; padding: 4px; box-shadow: none; border-width: 2px; }
   .main-nav .nav-submenu a { padding: 10px 12px; }
 }
+
+
+/* Social-share campaign document refresh */
+.official-document { max-width: 794px; min-height: 1123px; margin: 40px auto 0; padding: 54px 58px 50px; color: var(--ink); background: var(--white); border: 4px solid var(--blue); border-radius: 24px; box-shadow: 12px 12px 0 var(--red); overflow: hidden; }
+.official-letterhead { display: flex; align-items: center; gap: 16px; padding-bottom: 8px; border-bottom: 0; }
+.official-letterhead img { width: 112px; height: 112px; object-fit: cover; border: 4px solid var(--orange); border-radius: 50%; }
+.official-letterhead p { margin: 0 0 7px; color: var(--blue); font-size: 16px; font-weight: 1000; line-height: 0.95; letter-spacing: -0.03em; }
+.official-letterhead span { color: var(--red); font-size: 10px; font-weight: 1000; letter-spacing: 0.1em; }
+.official-document-title { display: flex; justify-content: space-between; gap: 20px; align-items: end; margin: 34px 0 27px; padding: 18px 0 16px; border-bottom: 0; border-top: 4px solid var(--orange); }
+.official-document-title p { max-width: 600px; margin: 0; color: var(--blue); font-size: clamp(30px, 5vw, 54px); font-weight: 1000; line-height: 0.88; letter-spacing: -0.07em; text-transform: uppercase; }
+.official-document-title time { flex: 0 0 auto; padding: 8px 10px; color: var(--blue); background: var(--orange); border-radius: 999px; font-size: 11px; font-weight: 1000; }
+.document-recipient, .document-subject, .document-greeting { margin: 12px 0; color: var(--ink); font-size: 15px; line-height: 1.45; }
+.document-subject { display: inline-block; margin: 22px 0 7px; padding: 7px 10px; color: var(--blue); background: rgba(255,173,8,0.28); border-left: 5px solid var(--red); font-size: 13px; font-weight: 900; }
+.document-greeting { margin-top: 24px; color: var(--red); font-weight: 900; }
+.document-body { min-height: 310px; margin-top: 17px; color: #252525; font-family: Arial, Helvetica, sans-serif; font-size: 17px; line-height: 1.58; }
+.document-body p { margin: 0 0 18px; }
+.official-document-images { display: flex; gap: 12px; margin: 24px 0; flex-wrap: wrap; }
+.official-document-images img { display: block; max-width: 100%; width: auto; max-height: 170px; object-fit: contain; border: 4px solid var(--blue); border-radius: 14px; }
+.document-signature { display: grid; gap: 4px; margin-top: 30px; color: var(--ink); font-size: 14px; }
+.document-signature p { margin: 0 0 17px; color: var(--red); font-family: Arial, Helvetica, sans-serif; font-size: 13px; font-weight: 900; }
+.document-signature strong { color: var(--blue); font-size: 18px; }
+.document-signature span { color: var(--red); font-size: 12px; font-weight: 900; }
+.official-document-footer { margin-top: 40px; padding-top: 15px; border-top: 0; color: var(--ink); font-size: 10px; letter-spacing: 0.04em; text-align: left; }
+@media (max-width: 620px) {
+  .official-document { padding: 30px 22px 28px; border-radius: 18px; box-shadow: 7px 7px 0 var(--red); }
+  .official-letterhead img { width: 78px; height: 78px; }
+  .official-letterhead p { font-size: 12px; }
+  .official-letterhead span { font-size: 8px; }
+  .official-document-title { align-items: flex-start; flex-direction: column; gap: 12px; }
+  .official-document-title p { font-size: clamp(30px, 11vw, 48px); }
+  .official-document-title time { align-self: flex-start; }
+}
+@media print {
+  .official-document { border: 0; border-radius: 0; box-shadow: none; }
+}
+
+/* The refreshed share card intentionally uses whitespace, not a divider, between header and title. */
+.official-document-title { border-top: 0; }
