@@ -10,7 +10,7 @@ async function loadManifesto() {
     document.querySelector('#manifesto-intro').textContent = content.intro || '';
     document.querySelector('#manifesto-closing').textContent = content.closing || '';
     manifestoSections.innerHTML = (content.sections || []).map((section) => `<article class="manifesto-block"><span class="block-number">${String((content.sections || []).indexOf(section) + 1).padStart(2, '0')}</span><div><h2>${escapeHtml(section.heading)}</h2><p>${escapeHtml(section.body)}</p></div></article>`).join('');
-    manifestoPhotos.innerHTML = (content.photos || []).map((photo) => `<img src="${escapeAttribute(photo)}" alt="Sri Vishnu campaign visual" loading="lazy" />`).join('');
+    manifestoPhotos.innerHTML = (content.photos || []).map((photo) => `<img src="${escapeAttribute(photo.replace('/sri-vishnu-poster.png', '/sri-vishnu-poster.webp').replace('/logo.jpg', '/logo.webp'))}" alt="Sri Vishnu campaign visual" loading="lazy" decoding="async" />`).join('');
   } catch (error) {
     manifestoSections.innerHTML = '<p class="form-status">Manifesto content is temporarily unavailable.</p>';
   }

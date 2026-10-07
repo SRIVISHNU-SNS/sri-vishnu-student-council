@@ -256,3 +256,10 @@ h1 em { color: var(--red); font-family: Georgia, 'Times New Roman', serif; font-
   .contact-note { margin-top: 40px; }
   .contact-note p { font-size: 14px; }
 }
+
+
+.card-downloads { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 0 auto 24px; }
+.card-downloads[hidden] { display: none; }
+@media (max-width: 520px) {
+  .card-downloads { justify-content: flex-start; }
+}

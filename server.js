@@ -16,6 +16,7 @@ const mime = {
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
   '.png': 'image/png',
+  '.webp': 'image/webp',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon'
 };
@@ -74,7 +75,7 @@ function serve(filePath, res) {
   const extension = path.extname(filePath).toLowerCase();
   res.writeHead(200, {
     'Content-Type': mime[extension] || 'application/octet-stream',
-    'Cache-Control': extension === '.png' || extension === '.jpg' ? 'public, max-age=31536000, immutable' : 'no-cache'
+    'Cache-Control': ['.png', '.jpg', '.jpeg', '.webp', '.ico'].includes(extension) ? 'public, max-age=31536000, immutable' : 'no-cache'
   });
   fs.createReadStream(filePath).pipe(res);
 }
