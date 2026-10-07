@@ -11,6 +11,7 @@ const documentStatus = document.querySelector('#document-status');
 const documentImagesInput = document.querySelector('#document-images');
 const manifestoImagesInput = document.querySelector('#manifesto-images');
 const manifestoImageStatus = document.querySelector('#manifesto-image-status');
+const manifestoDownloadCount = document.querySelector('#manifesto-download-count');
 let manifestoState = { sections: [] };
 let documentImages = [];
 let manifestoImages = [];
@@ -32,7 +33,7 @@ async function checkSession() {
   if (session.authenticated) {
     login.hidden = true; dashboard.hidden = false;
     document.querySelector('#admin-identity').textContent = `Signed in as ${session.email}`;
-    await Promise.all([loadApplications('all'), loadManifesto(), loadMemberships()]);
+    await Promise.all([loadApplications('all'), loadManifesto(), loadMemberships(), loadManifestoAnalytics()]);
   } else { login.hidden = false; dashboard.hidden = true; }
 }
 
@@ -45,6 +46,7 @@ loginForm?.addEventListener('submit', async (event) => {
 
 document.querySelector('#logout-button')?.addEventListener('click', async () => { await api('/api/admin/logout', { method: 'POST' }); window.location.reload(); });
 document.querySelector('#refresh-button')?.addEventListener('click', () => checkSession());
+document.querySelector('#refresh-manifesto-analytics')?.addEventListener('click', () => loadManifestoAnalytics());
 
 document.querySelectorAll('.admin-tab').forEach((tab) => tab.addEventListener('click', () => {
   document.querySelectorAll('.admin-tab').forEach((item) => item.classList.toggle('is-active', item === tab));
@@ -141,6 +143,13 @@ manifestoImagesInput?.addEventListener('change', async () => {
 async function loadMemberships() {
   const { memberships } = await api('/api/admin/memberships');
   membershipList.innerHTML = memberships.length ? memberships.map((member) => `<article class="membership-row"><div><span class="status-pill status-${escapeAttribute(member.status)}">${escapeHtml(member.status)}</span><h2>${escapeHtml(member.firstName)}</h2><p><strong>${escapeHtml(member.role || 'Member')}</strong> · ${escapeHtml(member.memberCode)} · ${escapeHtml(member.section)} · ${escapeHtml(member.email)}</p></div><a class="outline-button" href="/membership-card.html?code=${encodeURIComponent(member.memberCode)}" target="_blank">OPEN CARD</a></article>`).join('') : '<p class="empty-state">No memberships yet. Accept an application to create one.</p>';
+}
+
+async function loadManifestoAnalytics() {
+  try {
+    const { downloads } = await api('/api/admin/analytics/manifesto');
+    if (manifestoDownloadCount) manifestoDownloadCount.textContent = Number(downloads || 0).toLocaleString();
+  } catch (error) { showStatus(document.querySelector('#manifesto-status'), error.message, true); }
 }
 
 function documentValues() {

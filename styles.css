@@ -357,3 +357,12 @@ h1 em { color: var(--red); font-family: Georgia, 'Times New Roman', serif; font-
   .manifesto-block { break-inside: avoid; }
   .manifesto-closing { margin-top: 28px; }
 }
+
+
+.manifesto-analytics-card { display: flex; align-items: center; justify-content: space-between; gap: 24px; max-width: 900px; margin: 0 0 24px; padding: 18px 22px; color: var(--white); background: var(--blue); border: 3px solid var(--red); box-shadow: 7px 7px 0 var(--orange); }
+.manifesto-analytics-card .eyebrow { margin-bottom: 4px; color: var(--orange); }
+.manifesto-analytics-card strong { display: block; font-size: clamp(34px, 5vw, 56px); line-height: 0.9; letter-spacing: -0.06em; }
+.manifesto-analytics-card span { display: block; margin-top: 6px; color: var(--white); font-size: 12px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
+.manifesto-analytics-card .outline-button { flex: 0 0 auto; color: var(--blue); background: var(--orange); border-color: var(--orange); }
+.manifesto-analytics-card .outline-button:hover, .manifesto-analytics-card .outline-button:focus-visible { color: var(--white); background: var(--red); border-color: var(--red); }
+@media (max-width: 560px) { .manifesto-analytics-card { align-items: flex-start; flex-direction: column; } }

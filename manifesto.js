@@ -25,5 +25,8 @@ async function loadManifesto() {
   }
 }
 
-manifestoDownload?.addEventListener('click', () => window.print());
+manifestoDownload?.addEventListener('click', () => {
+  fetch('/api/analytics/manifesto-download', { method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true }).catch(() => {});
+  window.print();
+});
 loadManifesto();

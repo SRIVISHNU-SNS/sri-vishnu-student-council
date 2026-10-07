@@ -206,6 +206,14 @@ async function handleApi(req, res) {
     try { return sendJson(res, 200, { content: await getManifesto() }); } catch (error) { return sendJson(res, 500, { error: error.message }); }
   }
 
+  if (req.method === 'POST' && pathname === '/api/analytics/manifesto-download') {
+    if (!sameOrigin(req)) return sendJson(res, 403, { error: 'Cross-origin analytics events are not accepted.' });
+    const result = getDb().prepare("UPDATE site_metrics SET metric_value = metric_value + 1, updated_at = CURRENT_TIMESTAMP WHERE metric_key = 'manifesto_downloads'").run();
+    if (!result.changes) return sendJson(res, 500, { error: 'Manifesto analytics metric is unavailable.' });
+    const row = getDb().prepare("SELECT metric_value FROM site_metrics WHERE metric_key = 'manifesto_downloads'").get();
+    return sendJson(res, 200, { ok: true, downloads: row.metric_value });
+  }
+
   if (req.method === 'POST' && pathname === '/api/admin/login') {
     if (!sameOrigin(req)) return sendJson(res, 403, { error: 'Cross-origin login is not accepted.' });
     try {
@@ -234,6 +242,11 @@ async function handleApi(req, res) {
   if (pathname.startsWith('/api/admin/')) {
     const admin = requireAdmin(req, res);
     if (!admin) return;
+
+    if (req.method === 'GET' && pathname === '/api/admin/analytics/manifesto') {
+      const row = getDb().prepare("SELECT metric_value, updated_at FROM site_metrics WHERE metric_key = 'manifesto_downloads'").get();
+      return sendJson(res, 200, { downloads: row?.metric_value || 0, updatedAt: row?.updated_at || null });
+    }
 
     if (req.method === 'GET' && pathname === '/api/admin/applications') {
       const status = cleanString(url.searchParams.get('status') || '', 20);
