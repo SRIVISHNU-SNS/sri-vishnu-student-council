@@ -176,7 +176,11 @@ function newMemberCode() {
 }
 
 async function getManifesto() {
-  const row = getDb().prepare('SELECT content_json FROM site_content WHERE content_key = ?').get('manifesto');
+  return getSiteContent('manifesto');
+}
+
+async function getSiteContent(contentKey) {
+  const row = getDb().prepare('SELECT content_json FROM site_content WHERE content_key = ?').get(contentKey);
   return contentPayload(row);
 }
 
@@ -204,6 +208,36 @@ async function handleApi(req, res) {
 
   if (req.method === 'GET' && pathname === '/api/content/manifesto') {
     try { return sendJson(res, 200, { content: await getManifesto() }); } catch (error) { return sendJson(res, 500, { error: error.message }); }
+  }
+
+  if (req.method === 'GET' && pathname === '/api/content/candidate') {
+    try { return sendJson(res, 200, { content: await getSiteContent('candidate') }); } catch (error) { return sendJson(res, 500, { error: error.message }); }
+  }
+
+  if (req.method === 'GET' && pathname === '/api/poll') {
+    const poll = getDb().prepare('SELECT id, title, intro, options_json, active FROM issue_poll WHERE id = 1').get();
+    if (!poll) return sendJson(res, 404, { error: 'Poll is not configured.' });
+    let options = [];
+    try { options = JSON.parse(poll.options_json); } catch { return sendJson(res, 500, { error: 'Poll options are invalid.' }); }
+    return sendJson(res, 200, { poll: { id: poll.id, title: poll.title, intro: poll.intro, options, active: Boolean(poll.active) } });
+  }
+
+  if (req.method === 'POST' && pathname === '/api/poll/vote') {
+    if (!sameOrigin(req)) return sendJson(res, 403, { error: 'Cross-origin votes are not accepted.' });
+    try {
+      const body = await readBody(req, 5000);
+      const poll = getDb().prepare('SELECT options_json, active FROM issue_poll WHERE id = 1').get();
+      if (!poll || !poll.active) return sendJson(res, 400, { error: 'This poll is currently closed.' });
+      const options = JSON.parse(poll.options_json);
+      const optionIndex = Number(body.optionIndex);
+      if (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex >= options.length) return sendJson(res, 400, { error: 'Please choose a valid priority.' });
+      const voterToken = cookies(req).poll_voter || crypto.randomBytes(24).toString('hex');
+      const existing = getDb().prepare('SELECT id FROM poll_votes WHERE poll_id = 1 AND voter_token = ?').get(voterToken);
+      if (existing) return sendJson(res, 409, { error: 'A response from this device has already been recorded.' });
+      getDb().prepare('INSERT INTO poll_votes (poll_id, option_index, voter_token) VALUES (1, ?, ?)').run(optionIndex, voterToken);
+      setCookie(res, 'poll_voter', voterToken, { maxAge: 31536000, sameSite: 'Lax' });
+      return sendJson(res, 201, { ok: true });
+    } catch (error) { return sendJson(res, 400, { error: error.message }); }
   }
 
   if (req.method === 'POST' && pathname === '/api/analytics/manifesto-download') {
@@ -263,6 +297,50 @@ async function handleApi(req, res) {
     if (req.method === 'GET' && pathname === '/api/admin/analytics/manifesto') {
       const row = getDb().prepare("SELECT metric_value, updated_at FROM site_metrics WHERE metric_key = 'manifesto_downloads'").get();
       return sendJson(res, 200, { downloads: row?.metric_value || 0, updatedAt: row?.updated_at || null });
+    }
+
+    if (req.method === 'GET' && pathname === '/api/admin/content/candidate') {
+      return sendJson(res, 200, { content: await getSiteContent('candidate') });
+    }
+
+    if (req.method === 'PUT' && pathname === '/api/admin/content/candidate') {
+      const body = await readBody(req, 2500000);
+      const content = {
+        name: cleanString(body.name, 160),
+        eyebrow: cleanString(body.eyebrow, 160),
+        tagline: cleanString(body.tagline, 300),
+        bio: cleanString(body.bio, 3000),
+        photo: (() => { const photo = cleanString(body.photo, 800000); return isAllowedImage(photo) ? photo : ''; })(),
+        whyVote: cleanString(body.whyVote, 3000),
+        promises: Array.isArray(body.promises) ? body.promises.slice(0, 5).map((item) => cleanString(item, 240)).filter(Boolean) : [],
+        instagram: (() => { const link = cleanString(body.instagram, 500); return /^https:\/\//i.test(link) ? link : ''; })(),
+        whatsapp: (() => { const link = cleanString(body.whatsapp, 500); return /^https:\/\//i.test(link) ? link : ''; })()
+      };
+      getDb().prepare('INSERT INTO site_content (content_key, content_json) VALUES (?, ?) ON CONFLICT(content_key) DO UPDATE SET content_json = excluded.content_json').run('candidate', JSON.stringify(content));
+      return sendJson(res, 200, { ok: true, content });
+    }
+
+    if (req.method === 'GET' && pathname === '/api/admin/poll') {
+      const poll = getDb().prepare('SELECT id, title, intro, options_json, active FROM issue_poll WHERE id = 1').get();
+      const options = JSON.parse(poll.options_json);
+      const results = options.map((label, index) => ({ optionIndex: index, label, votes: getDb().prepare('SELECT COUNT(*) AS count FROM poll_votes WHERE poll_id = 1 AND option_index = ?').get(index).count }));
+      return sendJson(res, 200, { poll: { id: poll.id, title: poll.title, intro: poll.intro, options, active: Boolean(poll.active) }, results, totalVotes: results.reduce((sum, result) => sum + result.votes, 0) });
+    }
+
+    if (req.method === 'PUT' && pathname === '/api/admin/poll') {
+      const body = await readBody(req, 30000);
+      const options = Array.isArray(body.options) ? body.options.slice(0, 12).map((item) => cleanString(item, 160)).filter(Boolean) : [];
+      if (options.length < 2) return sendJson(res, 400, { error: 'Add at least two poll options.' });
+      const title = cleanString(body.title, 240);
+      const intro = cleanString(body.intro, 800);
+      if (!title || !intro) return sendJson(res, 400, { error: 'Poll title and instructions are required.' });
+      getDb().prepare('UPDATE issue_poll SET title = ?, intro = ?, options_json = ?, active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1').run(title, intro, JSON.stringify(options), body.active === false ? 0 : 1);
+      return sendJson(res, 200, { ok: true });
+    }
+
+    if (req.method === 'POST' && pathname === '/api/admin/poll/reset') {
+      getDb().prepare('DELETE FROM poll_votes WHERE poll_id = 1').run();
+      return sendJson(res, 200, { ok: true });
     }
 
     if (req.method === 'GET' && pathname === '/api/admin/feedback/manifesto') {

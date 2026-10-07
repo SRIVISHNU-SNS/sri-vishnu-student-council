@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Meet the student council candidate and campaign priorities." />
+  <title>Candidate Profile</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+</head>
+<body class="inner-page candidate-page">
+  <div class="top-strip" aria-hidden="true"></div>
+  <div class="page-shell">
+    <header class="site-header site-wrap">
+      <a class="wordmark" href="/" aria-label="Main campaign site home"><img src="/logo.webp" alt="Campaign logo" /></a>
+      <div class="header-tools"><p class="header-note">MEET THE CANDIDATE</p><a class="header-link" href="/poll.html">SHARE YOUR PRIORITY</a><button class="menu-toggle" type="button" aria-controls="candidate-nav" aria-expanded="false">MENU</button></div>
+      <nav class="main-nav" id="candidate-nav" aria-label="Primary navigation"><a href="/">Home</a><a href="/manifesto.html">Manifesto</a><a href="/poll.html">Student poll</a><a href="/candidate.html">Candidate</a></nav>
+    </header>
+    <main class="candidate-main site-wrap">
+      <section class="candidate-hero" id="candidate-card">
+        <div class="candidate-photo-frame"><img id="candidate-photo" src="/logo.webp" alt="Candidate portrait" /></div>
+        <div class="candidate-copy"><p class="eyebrow" id="candidate-eyebrow">STUDENT COUNCIL CANDIDATE</p><h1 class="inner-title" id="candidate-name">Your Candidate Name</h1><p class="candidate-tagline" id="candidate-tagline">A clear voice for a stronger student experience.</p><p class="body-copy" id="candidate-bio"></p><div class="candidate-actions"><button class="primary-button inline-button" id="share-candidate" type="button">SHARE PROFILE</button><button class="outline-button" id="print-candidate" type="button">SAVE CAMPAIGN CARD</button></div></div>
+      </section>
+      <section class="candidate-promises"><div><p class="eyebrow">FIVE CLEAR PRIORITIES</p><h2>What I will work for.</h2></div><ol id="candidate-promises"></ol></section>
+      <section class="candidate-why"><p class="eyebrow">WHY THIS CAMPAIGN</p><blockquote id="candidate-why-vote"></blockquote></section>
+      <section class="candidate-connect"><p class="eyebrow">CONNECT &amp; SHARE</p><div id="candidate-links" class="candidate-links"></div></section>
+    </main>
+    <footer class="site-footer"><div class="site-wrap footer-inner"><div class="footer-left"><div class="footer-lockup">SRI VISHNU<br /><span>FOR STUDENTS GENERAL COUNCIL</span></div><p class="footer-copy">Listen.<br />Represent.<br />Deliver.</p></div><div class="footer-right"><p><a href="/poll.html">Student poll</a><span class="divider">|</span><a href="/manifesto.html">Manifesto</a></p><p class="footer-small">A student-first campaign for every student.</p></div></div></footer>
+  </div>
+  <script src="/script.js"></script><script src="/candidate.js"></script>
+</body>
+</html>

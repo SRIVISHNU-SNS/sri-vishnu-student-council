@@ -14,9 +14,16 @@ const manifestoImageStatus = document.querySelector('#manifesto-image-status');
 const manifestoDownloadCount = document.querySelector('#manifesto-download-count');
 const adminFeedbackList = document.querySelector('#admin-feedback-list');
 const feedbackAdminStatus = document.querySelector('#feedback-admin-status');
+const pollAdminForm = document.querySelector('#poll-admin-form');
+const pollOptionEditor = document.querySelector('#poll-option-editor');
+const candidateForm = document.querySelector('#candidate-form');
+const candidateImageInput = document.querySelector('#candidate-image');
+const candidateStatus = document.querySelector('#candidate-status');
 let manifestoState = { sections: [] };
 let documentImages = [];
 let manifestoImages = [];
+let pollState = { options: [] };
+let candidateImage = '';
 
 async function api(url, options = {}) {
   const response = await fetch(url, { headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options });
@@ -35,7 +42,7 @@ async function checkSession() {
   if (session.authenticated) {
     login.hidden = true; dashboard.hidden = false;
     document.querySelector('#admin-identity').textContent = `Signed in as ${session.email}`;
-    await Promise.all([loadApplications('all'), loadManifesto(), loadMemberships(), loadManifestoAnalytics(), loadAdminFeedback()]);
+    await Promise.all([loadApplications('all'), loadManifesto(), loadMemberships(), loadManifestoAnalytics(), loadAdminFeedback(), loadPollAdmin(), loadCandidateAdmin()]);
   } else { login.hidden = false; dashboard.hidden = true; }
 }
 
@@ -50,6 +57,9 @@ document.querySelector('#logout-button')?.addEventListener('click', async () => 
 document.querySelector('#refresh-button')?.addEventListener('click', () => checkSession());
 document.querySelector('#refresh-manifesto-analytics')?.addEventListener('click', () => loadManifestoAnalytics());
 document.querySelector('#refresh-feedback')?.addEventListener('click', () => loadAdminFeedback());
+document.querySelector('#add-poll-option')?.addEventListener('click', () => { if (pollState.options.length < 12) { pollState.options.push(''); renderPollOptionEditor(); } });
+document.querySelector('#refresh-poll-report')?.addEventListener('click', () => loadPollReport());
+document.querySelector('#reset-poll-votes')?.addEventListener('click', resetPollVotes);
 
 document.querySelectorAll('.admin-tab').forEach((tab) => tab.addEventListener('click', () => {
   document.querySelectorAll('.admin-tab').forEach((item) => item.classList.toggle('is-active', item === tab));
@@ -162,6 +172,77 @@ async function loadAdminFeedback() {
     adminFeedbackList.querySelectorAll('[data-delete-feedback]').forEach((button) => button.addEventListener('click', () => deleteFeedback(button.dataset.deleteFeedback)));
   } catch (error) { showStatus(feedbackAdminStatus, error.message, true); }
 }
+
+async function loadPollAdmin() {
+  const { poll } = await api('/api/admin/poll');
+  pollState = poll;
+  pollAdminForm.elements.title.value = poll.title || '';
+  pollAdminForm.elements.intro.value = poll.intro || '';
+  pollAdminForm.elements.active.checked = Boolean(poll.active);
+  renderPollOptionEditor();
+  await loadPollReport();
+}
+
+function renderPollOptionEditor() {
+  pollOptionEditor.innerHTML = pollState.options.map((option, index) => `<label>Option ${index + 1}<div class="poll-option-admin-row"><input data-poll-option="${index}" type="text" maxlength="160" value="${escapeAttribute(option)}" required /><button class="remove-section" data-remove-poll-option="${index}" type="button">Remove</button></div></label>`).join('');
+  pollOptionEditor.querySelectorAll('[data-remove-poll-option]').forEach((button) => button.addEventListener('click', () => { if (pollState.options.length > 2) { pollState.options.splice(Number(button.dataset.removePollOption), 1); renderPollOptionEditor(); } }));
+}
+
+async function loadPollReport() {
+  try {
+    const { results, totalVotes } = await api('/api/admin/poll');
+    document.querySelector('#poll-total-votes').textContent = Number(totalVotes || 0).toLocaleString();
+    document.querySelector('#poll-results').innerHTML = results.map((result) => `<div class="poll-result-row"><div><strong>${escapeHtml(result.label)}</strong><span>${result.votes} vote${result.votes === 1 ? '' : 's'}</span></div><div class="poll-result-bar"><i style="width:${totalVotes ? Math.round((result.votes / totalVotes) * 100) : 0}%"></i></div></div>`).join('');
+  } catch (error) { showStatus(document.querySelector('#poll-admin-status'), error.message, true); }
+}
+
+pollAdminForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const options = [...pollOptionEditor.querySelectorAll('[data-poll-option]')].map((input) => input.value.trim()).filter(Boolean);
+  try { await api('/api/admin/poll', { method: 'PUT', body: JSON.stringify({ title: pollAdminForm.elements.title.value, intro: pollAdminForm.elements.intro.value, active: pollAdminForm.elements.active.checked, options }) }); showStatus(document.querySelector('#poll-admin-status'), 'Poll saved.'); await loadPollAdmin(); }
+  catch (error) { showStatus(document.querySelector('#poll-admin-status'), error.message, true); }
+});
+
+async function resetPollVotes() {
+  if (!window.confirm('Reset all private poll responses? This cannot be undone.')) return;
+  try { await api('/api/admin/poll/reset', { method: 'POST' }); await loadPollReport(); showStatus(document.querySelector('#poll-admin-status'), 'Poll responses reset.'); }
+  catch (error) { showStatus(document.querySelector('#poll-admin-status'), error.message, true); }
+}
+
+async function loadCandidateAdmin() {
+  const { content } = await api('/api/admin/content/candidate');
+  candidateForm.elements.name.value = content.name || '';
+  candidateForm.elements.eyebrow.value = content.eyebrow || '';
+  candidateForm.elements.tagline.value = content.tagline || '';
+  candidateForm.elements.bio.value = content.bio || '';
+  candidateForm.elements.whyVote.value = content.whyVote || '';
+  candidateForm.elements.photo.value = content.photo || '';
+  candidateForm.elements.instagram.value = content.instagram || '';
+  candidateForm.elements.whatsapp.value = content.whatsapp || '';
+  candidateImage = /^data:image\//i.test(content.photo || '') ? content.photo : '';
+  candidateForm.dataset.promises = JSON.stringify(content.promises || []);
+  renderCandidatePromises(JSON.parse(candidateForm.dataset.promises));
+}
+
+function renderCandidatePromises(promises) {
+  const values = [...promises, '', '', '', '', ''].slice(0, 5);
+  document.querySelector('#candidate-promises-editor').innerHTML = values.map((promise, index) => `<label>Promise ${index + 1}<input data-candidate-promise="${index}" type="text" maxlength="240" value="${escapeAttribute(promise)}" placeholder="A clear, measurable promise" /></label>`).join('');
+}
+
+candidateForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const promises = [...document.querySelectorAll('[data-candidate-promise]')].map((input) => input.value.trim()).filter(Boolean).slice(0, 5);
+  const photo = candidateImage || candidateForm.elements.photo.value.trim();
+  try { await api('/api/admin/content/candidate', { method: 'PUT', body: JSON.stringify({ name: candidateForm.elements.name.value, eyebrow: candidateForm.elements.eyebrow.value, tagline: candidateForm.elements.tagline.value, bio: candidateForm.elements.bio.value, whyVote: candidateForm.elements.whyVote.value, photo, promises, instagram: candidateForm.elements.instagram.value, whatsapp: candidateForm.elements.whatsapp.value }) }); showStatus(candidateStatus, 'Candidate profile saved.'); }
+  catch (error) { showStatus(candidateStatus, error.message, true); }
+});
+
+candidateImageInput?.addEventListener('change', async () => {
+  const file = candidateImageInput.files[0];
+  if (!file) return;
+  try { candidateImage = await compressManifestoImage(file); candidateForm.elements.photo.value = 'Uploaded image ready'; showStatus(candidateStatus, 'Profile image ready. Save the candidate profile to publish it.'); }
+  catch (error) { showStatus(candidateStatus, 'The profile image could not be prepared.', true); }
+});
 
 async function deleteFeedback(id) {
   if (!window.confirm('Delete this comment from the public manifesto page?')) return;

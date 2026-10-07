@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Share the student issue that matters most to you." />
+  <title>Student Priorities Poll</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="inner-page poll-page">
+  <div class="top-strip" aria-hidden="true"></div>
+  <div class="page-shell">
+    <main class="poll-main site-wrap" id="poll-main">
+      <div class="poll-brand" aria-label="Student priorities"><span>STUDENT</span><strong>VOICE</strong></div>
+      <section class="poll-card" aria-labelledby="poll-title">
+        <p class="eyebrow" id="poll-eyebrow">YOUR VOICE MATTERS</p>
+        <h1 class="inner-title" id="poll-title">What should student leaders focus on first?</h1>
+        <p class="inner-intro" id="poll-intro">Choose the one issue that matters most to you. Your response is private.</p>
+        <form id="poll-form" class="poll-form">
+          <div id="poll-options" class="poll-options" role="radiogroup" aria-label="Student priority options"></div>
+          <button class="primary-button poll-submit" id="poll-submit" type="submit">SUBMIT MY PRIORITY</button>
+          <p class="form-status" id="poll-status" role="status"></p>
+        </form>
+      </section>
+      <section class="poll-thanks" id="poll-thanks" hidden aria-live="polite"><span class="thanks-mark">✓</span><p class="eyebrow">RESPONSE RECEIVED</p><h2>Thank you for being heard.</h2><p>Your priority has been recorded privately. Vote totals are available only to the campaign administrators.</p></section>
+      <p class="poll-note">One response per device. No public vote totals are shown.</p>
+    </main>
+    <footer class="site-footer"><div class="site-wrap footer-inner"><div class="footer-left"><div class="footer-lockup">STUDENT<br /><span>VOICE &amp; PRIORITIES</span></div><p class="footer-copy">Listen.<br />Speak.<br />Shape what comes next.</p></div><div class="footer-right"><p><a href="/candidate.html">Candidate profile</a><span class="divider">|</span><a href="/">Main site</a></p><p class="footer-small">A private student priorities poll.</p></div></div></footer>
+  </div>
+  <script src="/poll.js"></script>
+</body>
+</html>
