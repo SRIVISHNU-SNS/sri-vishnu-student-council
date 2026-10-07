@@ -62,9 +62,19 @@ feedbackForm?.addEventListener('submit', async (event) => {
   } catch (error) { showFeedbackStatus(error.message, true); }
 });
 
-manifestoDownload?.addEventListener('click', () => {
+manifestoDownload?.addEventListener('click', async () => {
+  manifestoDownload.disabled = true;
+  manifestoDownload.textContent = 'PREPARING PDF…';
   fetch('/api/analytics/manifesto-download', { method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true }).catch(() => {});
-  window.print();
+  try {
+    await downloadElementAsPdf(document.querySelector('#manifesto-document'), 'student-council-manifesto.pdf', { onProgress: (message) => { manifestoDownload.textContent = message === 'PDF downloaded.' ? 'PDF DOWNLOADED' : 'PREPARING PDF…'; } });
+  } catch (error) {
+    manifestoDownload.textContent = 'DOWNLOAD MANIFESTO PDF';
+    window.alert(error.message);
+  } finally {
+    manifestoDownload.disabled = false;
+    if (manifestoDownload.textContent === 'PDF DOWNLOADED') setTimeout(() => { manifestoDownload.textContent = 'DOWNLOAD MANIFESTO PDF'; }, 2400);
+  }
 });
 
 if (feedbackSection && 'IntersectionObserver' in window) {

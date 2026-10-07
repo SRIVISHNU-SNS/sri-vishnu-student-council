@@ -42,7 +42,7 @@
               <label>Signatory name<input name="signatory" type="text" placeholder="Your full name" /></label>
               <label>Signatory role<input name="signatoryRole" type="text" placeholder="President / Secretary / Council Representative" /></label>
               <label class="full-field">Footer details<input name="footer" type="text" value="Sri Vishnu for Students General Council · srivishnusnsct@gmail.com" /></label>
-              <label class="full-field">Add images <span class="field-hint">Optional. Choose up to 3 images for the letter. They are included in the preview and printed PDF.</span><input id="document-images" type="file" accept="image/*" multiple /></label>
+              <label class="full-field">Add images <span class="field-hint">Optional. Choose up to 3 images for the letter. They are included in the preview and downloaded PDF.</span><input id="document-images" type="file" accept="image/*" multiple /></label>
             </div>
             <div class="generator-actions"><button class="primary-button" type="submit">MAKE PREVIEW</button><button class="outline-button" id="print-document" type="button">SHARE / SAVE PDF</button></div>
             <p class="form-status" id="document-status" role="status"></p>
@@ -53,6 +53,6 @@
     </main>
     <footer class="site-footer"><div class="site-wrap footer-inner"><div class="footer-left"><div class="footer-lockup">SRI VISHNU<br /><span>FOR STUDENTS GENERAL COUNCIL</span></div><p class="footer-copy">Listen.<br />Represent.<br />Deliver.</p></div><div class="footer-right"><p><a href="/">Public site</a><span class="divider">|</span><a href="/manifesto.html">Manifesto</a></p><p class="footer-small">Private review dashboard.</p></div></div></footer>
   </div>
-  <script src="/script.js"></script><script src="/admin.js"></script>
+  <script src="/script.js"></script><script src="/vendor/html2canvas.min.js"></script><script src="/vendor/jspdf.umd.min.js"></script><script src="/pdf-export.js"></script><script src="/admin.js"></script>
 </body>
 </html>

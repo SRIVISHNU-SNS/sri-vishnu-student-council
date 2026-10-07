@@ -263,9 +263,24 @@ function renderOfficialDocument() {
   officialDocument.hidden = false;
 }
 
-officialDocumentForm?.addEventListener('submit', (event) => { event.preventDefault(); renderOfficialDocument(); showStatus(documentStatus, 'Preview generated. Review it below, then print or save as PDF.'); officialDocument.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+officialDocumentForm?.addEventListener('submit', (event) => { event.preventDefault(); renderOfficialDocument(); showStatus(documentStatus, 'Preview generated. You can download the finished PDF directly.'); officialDocument.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
 
-document.querySelector('#print-document')?.addEventListener('click', () => { if (officialDocument.hidden) renderOfficialDocument(); setTimeout(() => window.print(), 100); });
+document.querySelector('#print-document')?.addEventListener('click', async (event) => {
+  if (officialDocument.hidden) renderOfficialDocument();
+  const button = event.currentTarget;
+  button.disabled = true;
+  button.textContent = 'PREPARING PDF…';
+  try {
+    const title = (documentValues().title || 'campaign-document').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'campaign-document';
+    await downloadElementAsPdf(officialDocument, `${title}.pdf`, { onProgress: (message) => { button.textContent = message === 'PDF downloaded.' ? 'PDF DOWNLOADED' : 'PREPARING PDF…'; } });
+  } catch (error) {
+    showStatus(documentStatus, error.message, true);
+    button.textContent = 'SHARE / SAVE PDF';
+  } finally {
+    button.disabled = false;
+    if (button.textContent === 'PDF DOWNLOADED') setTimeout(() => { button.textContent = 'SHARE / SAVE PDF'; }, 2400);
+  }
+});
 
 documentImagesInput?.addEventListener('change', () => {
   const files = [...documentImagesInput.files].slice(0, 3);
