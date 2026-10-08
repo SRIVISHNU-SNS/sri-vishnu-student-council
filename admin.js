@@ -299,6 +299,23 @@ document.querySelector('#download-document-svg')?.addEventListener('click', asyn
   }
 });
 
+document.querySelector('#download-document-image')?.addEventListener('click', async (event) => {
+  if (officialDocument.hidden) renderOfficialDocument();
+  const button = event.currentTarget;
+  button.disabled = true;
+  button.textContent = 'PREPARING IMAGE…';
+  try {
+    const title = (documentValues().title || 'campaign-document').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'campaign-document';
+    await downloadElementAsImage(officialDocument, `${title}.png`, { onProgress: (message) => { button.textContent = message === 'Image downloaded.' ? 'IMAGE DOWNLOADED' : 'PREPARING IMAGE…'; } });
+  } catch (error) {
+    showStatus(documentStatus, error.message, true);
+    button.textContent = 'DOWNLOAD IMAGE';
+  } finally {
+    button.disabled = false;
+    if (button.textContent === 'IMAGE DOWNLOADED') setTimeout(() => { button.textContent = 'DOWNLOAD IMAGE'; }, 2400);
+  }
+});
+
 documentImagesInput?.addEventListener('change', () => {
   const files = [...documentImagesInput.files].slice(0, 3);
   documentImages = [];

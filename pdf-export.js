@@ -84,3 +84,22 @@ async function downloadElementAsSvg(element, filename, { backgroundColor = '#fff
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   onProgress?.('SVG downloaded.');
 }
+
+async function downloadElementAsImage(element, filename, { backgroundColor = '#fffaf2', onProgress } = {}) {
+  if (!element || typeof html2canvas !== 'function') throw new Error('Image download is temporarily unavailable.');
+  await waitForImages(element);
+  onProgress?.('Preparing image…');
+  const width = Math.max(element.scrollWidth, 1);
+  const canvas = await html2canvas(element, { scale: Math.min(3, 2400 / width), useCORS: true, allowTaint: false, backgroundColor, logging: false, windowWidth: Math.max(document.documentElement.clientWidth, width) });
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+  if (!blob) throw new Error('Image download could not be created.');
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  onProgress?.('Image downloaded.');
+}
