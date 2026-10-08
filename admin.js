@@ -282,6 +282,23 @@ document.querySelector('#print-document')?.addEventListener('click', async (even
   }
 });
 
+document.querySelector('#download-document-svg')?.addEventListener('click', async (event) => {
+  if (officialDocument.hidden) renderOfficialDocument();
+  const button = event.currentTarget;
+  button.disabled = true;
+  button.textContent = 'PREPARING SVG…';
+  try {
+    const title = (documentValues().title || 'campaign-document').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'campaign-document';
+    await downloadElementAsSvg(officialDocument, `${title}.svg`, { onProgress: (message) => { button.textContent = message === 'SVG downloaded.' ? 'SVG DOWNLOADED' : 'PREPARING SVG…'; } });
+  } catch (error) {
+    showStatus(documentStatus, error.message, true);
+    button.textContent = 'DOWNLOAD SVG';
+  } finally {
+    button.disabled = false;
+    if (button.textContent === 'SVG DOWNLOADED') setTimeout(() => { button.textContent = 'DOWNLOAD SVG'; }, 2400);
+  }
+});
+
 documentImagesInput?.addEventListener('change', () => {
   const files = [...documentImagesInput.files].slice(0, 3);
   documentImages = [];

@@ -12,7 +12,6 @@ async function downloadElementAsPdf(element, filename, { backgroundColor = '#fff
   const margin = 8;
   const pageWidth = 210 - (margin * 2);
   const pageHeight = 297 - (margin * 2);
-  const imageHeight = (canvas.height * pageWidth) / canvas.width;
   const pageCanvasHeight = Math.max(1, Math.floor((canvas.width * pageHeight) / pageWidth));
   let offset = 0;
   let page = 0;
@@ -30,4 +29,58 @@ async function downloadElementAsPdf(element, filename, { backgroundColor = '#fff
   }
   pdf.save(filename);
   onProgress?.('PDF downloaded.');
+}
+
+function collectStyles() {
+  return [...document.styleSheets].map((sheet) => {
+    try { return [...sheet.cssRules].map((rule) => rule.cssText).join('\n'); } catch (error) { return ''; }
+  }).join('\n');
+}
+
+async function imageAsDataUrl(source) {
+  if (!source || source.startsWith('data:')) return source;
+  try {
+    const response = await fetch(new URL(source, window.location.href).href, { credentials: 'same-origin' });
+    if (!response.ok) return source;
+    const blob = await response.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => resolve(source);
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) { return source; }
+}
+
+async function downloadElementAsSvg(element, filename, { backgroundColor = '#fffaf2', onProgress } = {}) {
+  if (!element) throw new Error('SVG download is temporarily unavailable.');
+  await waitForImages(element);
+  onProgress?.('Preparing SVG…');
+  const width = Math.ceil(element.scrollWidth || element.getBoundingClientRect().width);
+  const height = Math.ceil(element.scrollHeight || element.getBoundingClientRect().height);
+  const clone = element.cloneNode(true);
+  clone.hidden = false;
+  clone.removeAttribute('id');
+  clone.style.width = `${width}px`;
+  clone.style.minHeight = `${height}px`;
+  clone.style.margin = '0';
+  clone.style.backgroundColor = backgroundColor;
+  await Promise.all([...clone.querySelectorAll('img')].map(async (image) => {
+    image.src = await imageAsDataUrl(image.getAttribute('src'));
+  }));
+  const style = document.createElement('style');
+  style.textContent = collectStyles();
+  clone.prepend(style);
+  const serialized = new XMLSerializer().serializeToString(clone);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xhtml="http://www.w3.org/1999/xhtml" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="100%" height="100%" fill="${backgroundColor}"/><foreignObject x="0" y="0" width="${width}" height="${height}">${serialized}</foreignObject></svg>`;
+  const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  onProgress?.('SVG downloaded.');
 }
