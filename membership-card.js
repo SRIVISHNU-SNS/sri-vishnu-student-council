@@ -47,11 +47,8 @@ async function drawCardCanvas() {
   context.stroke();
 
   context.fillStyle = '#ffad08';
-  context.font = '900 58px Arial, Helvetica, sans-serif';
-  context.fillText('SRI VISHNU', 82, 112);
-  context.fillStyle = '#fffaf2';
-  context.font = '900 24px Arial, Helvetica, sans-serif';
-  context.fillText('ISSUED WITH LOVE BY GENERAL COUNCIL', 85, 153);
+  context.font = '900 30px Arial, Helvetica, sans-serif';
+  context.fillText('ISSUED WITH LOVE BY GENERAL COUNCIL', 82, 132);
 
   context.fillStyle = '#ffad08';
   context.font = '900 24px Arial, Helvetica, sans-serif';
