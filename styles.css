@@ -177,6 +177,7 @@ h1 em { color: var(--red); font-family: Georgia, 'Times New Roman', serif; font-
 .empty-state { color: var(--ink); font-weight: 700; }
 .membership-card-admin-row { display: grid; grid-template-columns: minmax(180px, 0.7fr) minmax(0, 2fr) auto; align-items: start; }
 .membership-admin-summary { min-width: 0; }
+.member-origin { display: inline-block; margin-left: 6px; padding: 5px 7px; color: var(--blue); background: var(--orange); font-size: 9px; font-weight: 1000; letter-spacing: 0.08em; }
 .membership-card-admin-fields { display: grid; grid-template-columns: repeat(3, minmax(120px, 1fr)); gap: 12px; }
 .membership-card-admin-fields label { display: grid; align-content: start; gap: 6px; color: var(--blue); font-size: 10px; font-weight: 1000; letter-spacing: 0.08em; }
 .membership-card-admin-fields input:not([type="file"]) { width: 100%; min-height: 38px; padding: 8px 10px; color: var(--blue); background: var(--white); border: 2px solid var(--blue); outline: none; font: inherit; font-size: 13px; font-weight: 400; letter-spacing: 0; }
@@ -185,6 +186,9 @@ h1 em { color: var(--red); font-family: Georgia, 'Times New Roman', serif; font-
 .membership-photo-control input[type="file"] { max-width: 100%; color: var(--ink); font-size: 12px; letter-spacing: 0; }
 .membership-admin-actions { display: grid; gap: 8px; justify-items: stretch; }
 .membership-admin-actions button:disabled, .membership-photo-control button:disabled { cursor: not-allowed; opacity: 0.5; }
+.standalone-card-form { display: grid; gap: 18px; max-width: 900px; margin: 0 0 35px; padding: 24px; background: var(--white); border: 2px solid var(--blue); box-shadow: 7px 7px 0 var(--red); }
+.standalone-card-form .generator-grid { margin-bottom: 2px; }
+.standalone-card-form .full-field { grid-column: 1 / -1; }
 .manifesto-editor { display: grid; gap: 18px; max-width: 800px; }
 .field-hint { color: var(--ink); font-size: 10px; font-weight: 400; text-transform: none; letter-spacing: 0; }
 .editable-section { display: grid; gap: 10px; padding: 18px; border: 2px solid var(--blue); background: rgba(255,250,242,0.5); }

@@ -157,7 +157,7 @@ manifestoImagesInput?.addEventListener('change', async () => {
 async function loadMemberships() {
   const { memberships } = await api('/api/admin/memberships');
   membershipRecords = memberships;
-  membershipList.innerHTML = memberships.length ? memberships.map((member) => `<article class="membership-row membership-card-admin-row" data-membership-row="${member.id}"><div class="membership-admin-summary"><span class="status-pill status-${escapeAttribute(member.status)}">${escapeHtml(member.status)}</span><h2>${escapeHtml(member.firstName)}</h2><p>${escapeHtml(member.memberCode)} · ${escapeHtml(member.email)}</p></div><div class="membership-card-admin-fields"><label>SECTION<input data-member-section type="text" maxlength="120" value="${escapeAttribute(member.section)}" /></label><label>CLUB NAME<input data-member-club type="text" maxlength="160" value="${escapeAttribute(member.clubName || '')}" placeholder="e.g. Robotics Club" /></label><label>CUSTOM ROLE<input data-member-role type="text" maxlength="120" value="${escapeAttribute(member.role || 'Member')}" placeholder="Member / President / Any role" /></label><label class="membership-photo-control">OPTIONAL PHOTO<input data-member-photo type="file" accept="image/png,image/jpeg,image/webp" /><span class="field-hint">${member.photoDataUrl ? 'A portrait is saved. Choose another to replace it.' : 'Upload a portrait for the card.'}</span><button class="role-button" data-remove-photo type="button" ${member.photoDataUrl ? '' : 'disabled'}>REMOVE PHOTO</button></label></div><div class="membership-admin-actions"><button class="primary-button" data-save-membership type="button">SAVE CARD DETAILS</button>${member.status === 'active' ? `<a class="outline-button" href="/membership-card.html?code=${encodeURIComponent(member.memberCode)}" target="_blank" rel="noopener">OPEN CARD</a>` : ''}</div></article>`).join('') : '<p class="empty-state">No memberships yet. Accept an application to create one.</p>';
+  membershipList.innerHTML = memberships.length ? memberships.map((member) => `<article class="membership-row membership-card-admin-row" data-membership-row="${member.id}" data-member-source="${member.source}"><div class="membership-admin-summary"><span class="status-pill status-${escapeAttribute(member.status)}">${escapeHtml(member.status)}</span><span class="member-origin">${member.source === 'standalone' ? 'DIRECT CARD' : 'APPLICATION'}</span><h2>${escapeHtml(member.firstName)}</h2><p>${escapeHtml(member.memberCode)}${member.email ? ` · ${escapeHtml(member.email)}` : ''}</p></div><div class="membership-card-admin-fields"><label>SECTION<input data-member-section type="text" maxlength="120" value="${escapeAttribute(member.section)}" /></label><label>CLUB NAME<input data-member-club type="text" maxlength="160" value="${escapeAttribute(member.clubName || '')}" placeholder="e.g. Robotics Club" /></label><label>CUSTOM ROLE<input data-member-role type="text" maxlength="120" value="${escapeAttribute(member.role || 'Member')}" placeholder="Member / President / Any role" /></label><label class="membership-photo-control">OPTIONAL PHOTO<input data-member-photo type="file" accept="image/png,image/jpeg,image/webp" /><span class="field-hint">${member.photoDataUrl ? 'A portrait is saved. Choose another to replace it.' : 'Upload a portrait for the card.'}</span><button class="role-button" data-remove-photo type="button" ${member.photoDataUrl ? '' : 'disabled'}>REMOVE PHOTO</button></label></div><div class="membership-admin-actions"><button class="primary-button" data-save-membership type="button">SAVE CARD DETAILS</button>${member.status === 'active' ? `<a class="outline-button" href="/membership-card.html?code=${encodeURIComponent(member.memberCode)}" target="_blank" rel="noopener">OPEN CARD</a>` : ''}</div></article>`).join('') : '<p class="empty-state">No cards yet. Create one above, or accept an application to create one.</p>';
 }
 
 function compressMembershipPhoto(file) {
@@ -182,10 +182,42 @@ function compressMembershipPhoto(file) {
   });
 }
 
+const standaloneCardForm = document.querySelector('#standalone-card-form');
+standaloneCardForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const status = document.querySelector('#standalone-card-status');
+  const submit = standaloneCardForm.querySelector('[type="submit"]');
+  submit.disabled = true;
+  showStatus(status, 'Creating membership card…');
+  try {
+    const photo = document.querySelector('#standalone-card-photo').files[0];
+    const photoDataUrl = photo ? await compressMembershipPhoto(photo) : '';
+    const fields = new FormData(standaloneCardForm);
+    const result = await api('/api/admin/memberships/standalone', {
+      method: 'POST',
+      body: JSON.stringify({
+        firstName: fields.get('firstName'),
+        section: fields.get('section'),
+        clubName: fields.get('clubName'),
+        role: fields.get('role'),
+        photoDataUrl
+      })
+    });
+    standaloneCardForm.reset();
+    standaloneCardForm.elements.role.value = 'Member';
+    showStatus(status, `Card created: ${result.memberCode}. Find it below and choose OPEN CARD to download or share it.`);
+    await loadMemberships();
+  } catch (error) {
+    showStatus(status, error.message, true);
+  } finally {
+    submit.disabled = false;
+  }
+});
+
 membershipList?.addEventListener('click', async (event) => {
   const row = event.target.closest('[data-membership-row]');
   if (!row) return;
-  const member = membershipRecords.find((item) => String(item.id) === row.dataset.membershipRow);
+  const member = membershipRecords.find((item) => String(item.id) === row.dataset.membershipRow && item.source === row.dataset.memberSource);
   if (!member) return;
   if (event.target.closest('[data-remove-photo]')) {
     member.photoDataUrl = '';
@@ -204,7 +236,10 @@ membershipList?.addEventListener('click', async (event) => {
     const file = row.querySelector('[data-member-photo]').files[0];
     let photoDataUrl = row.dataset.removePhoto === 'true' ? '' : member.photoDataUrl || '';
     if (file) photoDataUrl = await compressMembershipPhoto(file);
-    await api(`/api/admin/memberships/${member.id}/card-details`, {
+    const detailsPath = member.source === 'standalone'
+      ? `/api/admin/memberships/standalone/${member.id}/card-details`
+      : `/api/admin/memberships/${member.id}/card-details`;
+    await api(detailsPath, {
       method: 'PUT',
       body: JSON.stringify({
         section: row.querySelector('[data-member-section]').value,

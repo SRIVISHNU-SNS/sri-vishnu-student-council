@@ -175,6 +175,14 @@ function newMemberCode() {
   return `SV-${year}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 }
 
+function uniqueMemberCode() {
+  let code;
+  do {
+    code = newMemberCode();
+  } while (getDb().prepare('SELECT 1 FROM memberships WHERE member_code = ? UNION SELECT 1 FROM standalone_memberships WHERE member_code = ?').get(code, code));
+  return code;
+}
+
 async function getManifesto() {
   return getSiteContent('manifesto');
 }
@@ -369,7 +377,45 @@ async function handleApi(req, res) {
 
     if (req.method === 'GET' && pathname === '/api/admin/memberships') {
       const rows = getDb().prepare('SELECT * FROM memberships ORDER BY approved_at DESC').all();
-      return sendJson(res, 200, { memberships: rows.map((row) => ({ id: row.id, memberCode: row.member_code, firstName: row.first_name, email: row.email, section: row.section, clubName: row.club_name || '', photoDataUrl: row.photo_data_url || '', mobile: row.mobile || '', role: row.role || 'Member', status: row.status, approvedAt: row.approved_at })) });
+      const standaloneRows = getDb().prepare('SELECT * FROM standalone_memberships ORDER BY approved_at DESC').all();
+      const memberships = [
+        ...rows.map((row) => ({ id: row.id, source: 'application', memberCode: row.member_code, firstName: row.first_name, email: row.email, section: row.section, clubName: row.club_name || '', photoDataUrl: row.photo_data_url || '', mobile: row.mobile || '', role: row.role || 'Member', status: row.status, approvedAt: row.approved_at })),
+        ...standaloneRows.map((row) => ({ id: row.id, source: 'standalone', memberCode: row.member_code, firstName: row.first_name, email: '', section: row.section, clubName: row.club_name || '', photoDataUrl: row.photo_data_url || '', mobile: '', role: row.role || 'Member', status: row.status, approvedAt: row.approved_at }))
+      ].sort((a, b) => String(b.approvedAt).localeCompare(String(a.approvedAt)));
+      return sendJson(res, 200, { memberships });
+    }
+
+    if (req.method === 'POST' && pathname === '/api/admin/memberships/standalone') {
+      const body = await readBody(req, 1500000);
+      const firstName = cleanString(body.firstName, 120);
+      const section = cleanString(body.section, 120);
+      const clubName = cleanString(body.clubName, 160);
+      const role = cleanString(body.role, 120) || 'Member';
+      const photoDataUrl = String(body.photoDataUrl || '');
+      if (!firstName || !section) return sendJson(res, 400, { error: 'Member name and section are required.' });
+      if (photoDataUrl && (photoDataUrl.length > 1000000 || !/^data:image\/(?:png|jpe?g|webp);base64,/i.test(photoDataUrl))) {
+        return sendJson(res, 400, { error: 'Use an uploaded PNG, JPG, or WebP photo smaller than 1 MB.' });
+      }
+      const memberCode = uniqueMemberCode();
+      const inserted = getDb().prepare('INSERT INTO standalone_memberships (member_code, first_name, section, club_name, role, photo_data_url) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(memberCode, firstName, section, clubName, role, photoDataUrl);
+      return sendJson(res, 201, { ok: true, memberCode, id: inserted.lastInsertRowid });
+    }
+
+    const standaloneDetailsMatch = pathname.match(/^\/api\/admin\/memberships\/standalone\/(\d+)\/card-details$/);
+    if (req.method === 'PUT' && standaloneDetailsMatch) {
+      const body = await readBody(req, 1500000);
+      const role = cleanString(body.role, 120) || 'Member';
+      const section = cleanString(body.section, 120);
+      const clubName = cleanString(body.clubName, 160);
+      const photoDataUrl = String(body.photoDataUrl || '');
+      if (photoDataUrl && (photoDataUrl.length > 1000000 || !/^data:image\/(?:png|jpe?g|webp);base64,/i.test(photoDataUrl))) {
+        return sendJson(res, 400, { error: 'Use an uploaded PNG, JPG, or WebP photo smaller than 1 MB.' });
+      }
+      const result = getDb().prepare('UPDATE standalone_memberships SET role = ?, section = ?, club_name = ?, photo_data_url = ? WHERE id = ?')
+        .run(role, section, clubName, photoDataUrl, Number(standaloneDetailsMatch[1]));
+      if (!result.changes) return sendJson(res, 404, { error: 'Membership not found.' });
+      return sendJson(res, 200, { ok: true });
     }
 
     const membershipDetailsMatch = pathname.match(/^\/api\/admin\/memberships\/(\d+)\/card-details$/);
@@ -442,8 +488,8 @@ async function handleApi(req, res) {
 
   const membershipMatch = pathname.match(/^\/api\/memberships\/([A-Za-z0-9-]+)$/);
   if (req.method === 'GET' && membershipMatch) {
-    const rows = [getDb().prepare('SELECT member_code, first_name, section, role, club_name, photo_data_url, status, approved_at FROM memberships WHERE member_code = ?').get(membershipMatch[1])].filter(Boolean);
-    const member = rows[0];
+    const member = getDb().prepare('SELECT member_code, first_name, section, role, club_name, photo_data_url, status, approved_at FROM memberships WHERE member_code = ?').get(membershipMatch[1])
+      || getDb().prepare('SELECT member_code, first_name, section, role, club_name, photo_data_url, status, approved_at FROM standalone_memberships WHERE member_code = ?').get(membershipMatch[1]);
     if (!member || member.status !== 'active') return sendJson(res, 404, { error: 'Membership not found or inactive.' });
     const includePhoto = url.searchParams.get('includePhoto') === '1';
     return sendJson(res, 200, { member: { memberCode: member.member_code, firstName: member.first_name, section: member.section, role: member.role || 'Member', clubName: member.club_name || '', ...(includePhoto ? { photoDataUrl: member.photo_data_url || '' } : {}), status: member.status, approvedAt: member.approved_at } });
@@ -451,8 +497,9 @@ async function handleApi(req, res) {
 
   const qrMatch = pathname.match(/^\/api\/memberships\/([A-Za-z0-9-]+)\/qr$/);
   if (req.method === 'GET' && qrMatch) {
-    const rows = [getDb().prepare('SELECT member_code, status FROM memberships WHERE member_code = ?').get(qrMatch[1])].filter(Boolean);
-    if (!rows[0] || rows[0].status !== 'active') return sendJson(res, 404, { error: 'Membership not found or inactive.' });
+    const member = getDb().prepare('SELECT member_code, status FROM memberships WHERE member_code = ?').get(qrMatch[1])
+      || getDb().prepare('SELECT member_code, status FROM standalone_memberships WHERE member_code = ?').get(qrMatch[1]);
+    if (!member || member.status !== 'active') return sendJson(res, 404, { error: 'Membership not found or inactive.' });
     const verifyUrl = `${publicOrigin(req)}/verify.html?code=${encodeURIComponent(qrMatch[1])}`;
     const dataUrl = await QRCode.toDataURL(verifyUrl, { width: 260, margin: 1, color: { dark: '#2419dc', light: '#ffffff' } });
     return sendJson(res, 200, { dataUrl, verifyUrl });
