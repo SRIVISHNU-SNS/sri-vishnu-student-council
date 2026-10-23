@@ -2,6 +2,7 @@ const query = new URLSearchParams(window.location.search);
 const code = query.get('code');
 const status = document.querySelector('#card-status');
 const downloadControls = document.querySelector('#card-downloads');
+const downloadPng = document.querySelector('#download-png');
 const downloadJpg = document.querySelector('#download-jpg');
 const downloadPdf = document.querySelector('#download-pdf');
 let member;
@@ -23,11 +24,13 @@ function loadImage(source) {
 
 async function drawCardCanvas() {
   const canvas = document.createElement('canvas');
+  const scale = 2;
   const width = 1600;
   const height = 900;
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = width * scale;
+  canvas.height = height * scale;
   const context = canvas.getContext('2d');
+  context.scale(scale, scale);
 
   context.fillStyle = '#2419dc';
   context.fillRect(0, 0, width, height);
@@ -159,6 +162,14 @@ async function exportJpg() {
   }, 'image/jpeg', 0.92);
 }
 
+async function exportPng() {
+  const canvas = await drawCardCanvas();
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+  if (!blob) throw new Error('High-quality PNG could not be created. Please try again.');
+  downloadBlob(blob, `sri-vishnu-membership-${safeFilename(member.memberCode)}.png`);
+  status.textContent = 'High-quality PNG downloaded.';
+}
+
 async function exportPdf() {
   const canvas = await drawCardCanvas();
   const jpeg = canvas.toDataURL('image/jpeg', 0.92);
@@ -193,6 +204,7 @@ async function loadCard() {
   downloadControls.hidden = false;
 }
 
+downloadPng.addEventListener('click', () => exportPng().catch((error) => { status.textContent = error.message; }));
 downloadJpg.addEventListener('click', () => exportJpg().catch((error) => { status.textContent = error.message; }));
 downloadPdf.addEventListener('click', () => exportPdf().catch((error) => { status.textContent = error.message; }));
 loadCard().catch((error) => { status.textContent = error.message; });
