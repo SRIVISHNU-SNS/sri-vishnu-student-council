@@ -11,6 +11,16 @@ function safeFilename(value) {
   return String(value || 'membership').replace(/[^a-z0-9-_]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase();
 }
 
+function loadImage(source) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = source;
+    if (image.decode) image.decode().then(() => resolve(image)).catch(() => {});
+  });
+}
+
 async function drawCardCanvas() {
   const canvas = document.createElement('canvas');
   const width = 1600;
@@ -49,15 +59,37 @@ async function drawCardCanvas() {
   context.fillText(name.length > 22 ? `${name.slice(0, 21)}…` : name, 82, 365);
   context.font = '32px Arial, Helvetica, sans-serif';
   context.fillText(`Section: ${member.section || ''}`, 86, 425);
-  context.fillText(`Role: ${member.role || 'Member'}`, 86, 470);
+  let detailsY = 470;
+  if (member.clubName) {
+    context.fillText(`Club: ${member.clubName}`, 86, detailsY);
+    detailsY += 45;
+  }
+  context.fillText(`Role: ${member.role || 'Member'}`, 86, detailsY);
   context.fillStyle = '#ffad08';
   context.font = '900 28px Arial, Helvetica, sans-serif';
-  context.fillText(member.memberCode || '', 86, 525);
+  context.fillText(member.memberCode || '', 86, detailsY + 55);
 
-  const qr = new Image();
-  qr.src = qrDataUrl;
-  if (qr.decode) await qr.decode();
-  else await new Promise((resolve, reject) => { qr.onload = resolve; qr.onerror = reject; });
+  if (member.photoDataUrl) {
+    try {
+      const photo = await loadImage(member.photoDataUrl);
+      context.save();
+      context.beginPath();
+      context.rect(1015, 275, 180, 180);
+      context.clip();
+      const scale = Math.max(180 / photo.width, 180 / photo.height);
+      const photoWidth = photo.width * scale;
+      const photoHeight = photo.height * scale;
+      context.drawImage(photo, 1105 - photoWidth / 2, 365 - photoHeight / 2, photoWidth, photoHeight);
+      context.restore();
+      context.strokeStyle = '#ffad08';
+      context.lineWidth = 5;
+      context.strokeRect(1015, 275, 180, 180);
+    } catch (error) {
+      console.warn('Member photo could not be loaded for export.');
+    }
+  }
+
+  const qr = await loadImage(qrDataUrl);
   context.fillStyle = '#fffaf2';
   context.fillRect(1260, 245, 250, 250);
   context.drawImage(qr, 1275, 260, 220, 220);
@@ -121,7 +153,10 @@ function makePdf(jpegDataUrl, width, height) {
 
 async function exportJpg() {
   const canvas = await drawCardCanvas();
-  canvas.toBlob((blob) => downloadBlob(blob, `sri-vishnu-membership-${safeFilename(member.memberCode)}.jpg`), 'image/jpeg', 0.92);
+  canvas.toBlob((blob) => {
+    if (blob) downloadBlob(blob, `sri-vishnu-membership-${safeFilename(member.memberCode)}.jpg`);
+    else status.textContent = 'JPG could not be created. Please try again.';
+  }, 'image/jpeg', 0.92);
 }
 
 async function exportPdf() {
@@ -132,7 +167,7 @@ async function exportPdf() {
 
 async function loadCard() {
   if (!code) throw new Error('No membership code was provided.');
-  const response = await fetch(`/api/memberships/${encodeURIComponent(code)}`);
+  const response = await fetch(`/api/memberships/${encodeURIComponent(code)}?includePhoto=1`);
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || 'Membership not found.');
   const qrResponse = await fetch(`/api/memberships/${encodeURIComponent(code)}/qr`);
@@ -142,12 +177,22 @@ async function loadCard() {
   qrDataUrl = qr.dataUrl;
   document.querySelector('#member-name').textContent = member.firstName;
   document.querySelector('#member-section').textContent = `Section: ${member.section}`;
+  const club = document.querySelector('#member-club');
+  club.hidden = !member.clubName;
+  club.textContent = member.clubName ? `Club: ${member.clubName}` : '';
   document.querySelector('#member-role').textContent = `Role: ${member.role || 'Member'}`;
   document.querySelector('#member-code').textContent = member.memberCode;
   document.querySelector('#member-qr').src = qrDataUrl;
+  const photoWrap = document.querySelector('#member-photo-wrap');
+  if (member.photoDataUrl) {
+    document.querySelector('#member-photo').src = member.photoDataUrl;
+    photoWrap.hidden = false;
+  } else {
+    photoWrap.hidden = true;
+  }
   downloadControls.hidden = false;
 }
 
-downloadJpg.addEventListener('click', exportJpg);
-downloadPdf.addEventListener('click', exportPdf);
+downloadJpg.addEventListener('click', () => exportJpg().catch((error) => { status.textContent = error.message; }));
+downloadPdf.addEventListener('click', () => exportPdf().catch((error) => { status.textContent = error.message; }));
 loadCard().catch((error) => { status.textContent = error.message; });

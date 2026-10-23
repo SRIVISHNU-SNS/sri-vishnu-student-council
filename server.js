@@ -369,7 +369,23 @@ async function handleApi(req, res) {
 
     if (req.method === 'GET' && pathname === '/api/admin/memberships') {
       const rows = getDb().prepare('SELECT * FROM memberships ORDER BY approved_at DESC').all();
-      return sendJson(res, 200, { memberships: rows.map((row) => ({ id: row.id, memberCode: row.member_code, firstName: row.first_name, email: row.email, section: row.section, mobile: row.mobile || '', role: row.role || 'Member', status: row.status, approvedAt: row.approved_at })) });
+      return sendJson(res, 200, { memberships: rows.map((row) => ({ id: row.id, memberCode: row.member_code, firstName: row.first_name, email: row.email, section: row.section, clubName: row.club_name || '', photoDataUrl: row.photo_data_url || '', mobile: row.mobile || '', role: row.role || 'Member', status: row.status, approvedAt: row.approved_at })) });
+    }
+
+    const membershipDetailsMatch = pathname.match(/^\/api\/admin\/memberships\/(\d+)\/card-details$/);
+    if (req.method === 'PUT' && membershipDetailsMatch) {
+      const body = await readBody(req, 1500000);
+      const role = cleanString(body.role, 120) || 'Member';
+      const section = cleanString(body.section, 120);
+      const clubName = cleanString(body.clubName, 160);
+      const photoDataUrl = String(body.photoDataUrl || '');
+      if (photoDataUrl && (photoDataUrl.length > 1000000 || !/^data:image\/(?:png|jpe?g|webp);base64,/i.test(photoDataUrl))) {
+        return sendJson(res, 400, { error: 'Use an uploaded PNG, JPG, or WebP photo smaller than 1 MB.' });
+      }
+      const result = getDb().prepare('UPDATE memberships SET role = ?, section = ?, club_name = ?, photo_data_url = ? WHERE id = ?')
+        .run(role, section, clubName, photoDataUrl, Number(membershipDetailsMatch[1]));
+      if (!result.changes) return sendJson(res, 404, { error: 'Membership not found.' });
+      return sendJson(res, 200, { ok: true });
     }
 
     if (req.method === 'GET' && pathname === '/api/admin/content/manifesto') {
@@ -426,10 +442,11 @@ async function handleApi(req, res) {
 
   const membershipMatch = pathname.match(/^\/api\/memberships\/([A-Za-z0-9-]+)$/);
   if (req.method === 'GET' && membershipMatch) {
-    const rows = [getDb().prepare('SELECT member_code, first_name, section, role, status, approved_at FROM memberships WHERE member_code = ?').get(membershipMatch[1])].filter(Boolean);
+    const rows = [getDb().prepare('SELECT member_code, first_name, section, role, club_name, photo_data_url, status, approved_at FROM memberships WHERE member_code = ?').get(membershipMatch[1])].filter(Boolean);
     const member = rows[0];
     if (!member || member.status !== 'active') return sendJson(res, 404, { error: 'Membership not found or inactive.' });
-    return sendJson(res, 200, { member: { memberCode: member.member_code, firstName: member.first_name, section: member.section, role: member.role || 'Member', status: member.status, approvedAt: member.approved_at } });
+    const includePhoto = url.searchParams.get('includePhoto') === '1';
+    return sendJson(res, 200, { member: { memberCode: member.member_code, firstName: member.first_name, section: member.section, role: member.role || 'Member', clubName: member.club_name || '', ...(includePhoto ? { photoDataUrl: member.photo_data_url || '' } : {}), status: member.status, approvedAt: member.approved_at } });
   }
 
   const qrMatch = pathname.match(/^\/api\/memberships\/([A-Za-z0-9-]+)\/qr$/);

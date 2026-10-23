@@ -7,7 +7,10 @@ async function verify() {
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || 'Membership could not be verified.');
   const member = result.member;
-  panel.innerHTML = `<div class="verified-mark">✓</div><p class="status-pill status-active">ACTIVE MEMBERSHIP</p><h2>${escapeHtml(member.firstName)}</h2><p>Section: <strong>${escapeHtml(member.section)}</strong></p><p>Member code: <strong>${escapeHtml(member.memberCode)}</strong></p><small>Approved ${new Date(member.approvedAt).toLocaleDateString()}</small>`;
+  panel.classList.remove('is-checking', 'is-error');
+  panel.classList.add('is-verified');
+  panel.innerHTML = `<div class="verify-result-head"><div class="verify-orbit" aria-hidden="true"><span class="verified-mark">✓</span></div><div><p class="status-pill status-active">ACTIVE MEMBERSHIP</p><h2>${escapeHtml(member.firstName)}</h2></div></div><div class="verify-details"><p><span>SECTION</span><strong>${escapeHtml(member.section || '—')}</strong></p>${member.clubName ? `<p><span>CLUB</span><strong>${escapeHtml(member.clubName)}</strong></p>` : ''}<p><span>ROLE</span><strong>${escapeHtml(member.role || 'Member')}</strong></p><p><span>MEMBER CODE</span><strong>${escapeHtml(member.memberCode)}</strong></p></div><small class="verify-approved">Approved ${new Date(member.approvedAt).toLocaleDateString()}</small>`;
 }
 function escapeHtml(value) { return String(value || '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char])); }
-verify().catch((error) => { panel.innerHTML = `<p class="form-status is-error">${escapeHtml(error.message)}</p>`; });
+panel.classList.add('is-checking');
+verify().catch((error) => { panel.classList.remove('is-checking', 'is-verified'); panel.classList.add('is-error'); panel.innerHTML = `<div class="verify-error-mark" aria-hidden="true">!</div><p class="form-status is-error">${escapeHtml(error.message)}</p>`; });

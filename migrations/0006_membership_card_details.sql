@@ -1,0 +1,2 @@
+ALTER TABLE memberships ADD COLUMN club_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE memberships ADD COLUMN photo_data_url TEXT NOT NULL DEFAULT '';

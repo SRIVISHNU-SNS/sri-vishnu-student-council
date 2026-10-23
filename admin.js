@@ -24,6 +24,7 @@ let documentImages = [];
 let manifestoImages = [];
 let pollState = { options: [] };
 let candidateImage = '';
+let membershipRecords = [];
 
 async function api(url, options = {}) {
   const response = await fetch(url, { headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options });
@@ -155,8 +156,71 @@ manifestoImagesInput?.addEventListener('change', async () => {
 
 async function loadMemberships() {
   const { memberships } = await api('/api/admin/memberships');
-  membershipList.innerHTML = memberships.length ? memberships.map((member) => `<article class="membership-row"><div><span class="status-pill status-${escapeAttribute(member.status)}">${escapeHtml(member.status)}</span><h2>${escapeHtml(member.firstName)}</h2><p><strong>${escapeHtml(member.role || 'Member')}</strong> · ${escapeHtml(member.memberCode)} · ${escapeHtml(member.section)} · ${escapeHtml(member.email)}</p></div><a class="outline-button" href="/membership-card.html?code=${encodeURIComponent(member.memberCode)}" target="_blank">OPEN CARD</a></article>`).join('') : '<p class="empty-state">No memberships yet. Accept an application to create one.</p>';
+  membershipRecords = memberships;
+  membershipList.innerHTML = memberships.length ? memberships.map((member) => `<article class="membership-row membership-card-admin-row" data-membership-row="${member.id}"><div class="membership-admin-summary"><span class="status-pill status-${escapeAttribute(member.status)}">${escapeHtml(member.status)}</span><h2>${escapeHtml(member.firstName)}</h2><p>${escapeHtml(member.memberCode)} · ${escapeHtml(member.email)}</p></div><div class="membership-card-admin-fields"><label>SECTION<input data-member-section type="text" maxlength="120" value="${escapeAttribute(member.section)}" /></label><label>CLUB NAME<input data-member-club type="text" maxlength="160" value="${escapeAttribute(member.clubName || '')}" placeholder="e.g. Robotics Club" /></label><label>CUSTOM ROLE<input data-member-role type="text" maxlength="120" value="${escapeAttribute(member.role || 'Member')}" placeholder="Member / President / Any role" /></label><label class="membership-photo-control">OPTIONAL PHOTO<input data-member-photo type="file" accept="image/png,image/jpeg,image/webp" /><span class="field-hint">${member.photoDataUrl ? 'A portrait is saved. Choose another to replace it.' : 'Upload a portrait for the card.'}</span><button class="role-button" data-remove-photo type="button" ${member.photoDataUrl ? '' : 'disabled'}>REMOVE PHOTO</button></label></div><div class="membership-admin-actions"><button class="primary-button" data-save-membership type="button">SAVE CARD DETAILS</button>${member.status === 'active' ? `<a class="outline-button" href="/membership-card.html?code=${encodeURIComponent(member.memberCode)}" target="_blank" rel="noopener">OPEN CARD</a>` : ''}</div></article>`).join('') : '<p class="empty-state">No memberships yet. Accept an application to create one.</p>';
 }
+
+function compressMembershipPhoto(file) {
+  return new Promise((resolve, reject) => {
+    if (!file || !/^image\/(png|jpe?g|webp)$/i.test(file.type)) return reject(new Error('Choose a PNG, JPG, or WebP photo.'));
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('The selected photo could not be read.'));
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => reject(new Error('The selected photo could not be opened.'));
+      image.onload = () => {
+        const scale = Math.min(1, 480 / Math.max(image.naturalWidth, image.naturalHeight));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+membershipList?.addEventListener('click', async (event) => {
+  const row = event.target.closest('[data-membership-row]');
+  if (!row) return;
+  const member = membershipRecords.find((item) => String(item.id) === row.dataset.membershipRow);
+  if (!member) return;
+  if (event.target.closest('[data-remove-photo]')) {
+    member.photoDataUrl = '';
+    const fileInput = row.querySelector('[data-member-photo]');
+    if (fileInput) fileInput.value = '';
+    showStatus(document.querySelector('#membership-admin-status'), 'Photo will be removed when you save card details.');
+    event.target.closest('[data-remove-photo]').disabled = true;
+    row.dataset.removePhoto = 'true';
+    return;
+  }
+  if (!event.target.closest('[data-save-membership]')) return;
+  const button = event.target.closest('[data-save-membership]');
+  button.disabled = true;
+  showStatus(document.querySelector('#membership-admin-status'), 'Saving card details…');
+  try {
+    const file = row.querySelector('[data-member-photo]').files[0];
+    let photoDataUrl = row.dataset.removePhoto === 'true' ? '' : member.photoDataUrl || '';
+    if (file) photoDataUrl = await compressMembershipPhoto(file);
+    await api(`/api/admin/memberships/${member.id}/card-details`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        section: row.querySelector('[data-member-section]').value,
+        clubName: row.querySelector('[data-member-club]').value,
+        role: row.querySelector('[data-member-role]').value,
+        photoDataUrl
+      })
+    });
+    showStatus(document.querySelector('#membership-admin-status'), 'Card details saved. Open the card to download the updated JPG or PDF.');
+    await loadMemberships();
+  } catch (error) {
+    showStatus(document.querySelector('#membership-admin-status'), error.message, true);
+  } finally {
+    button.disabled = false;
+  }
+});
 
 async function loadManifestoAnalytics() {
   try {
